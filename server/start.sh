@@ -1,48 +1,48 @@
 #!/bin/bash
 set -e
 
-# ── Phase 1: Let the official entrypoint fully initialise Postgres ──
-# The entrypoint starts a temp server, runs initdb, shuts it down,
-# then starts Postgres for real. We must NOT interfere during that.
-echo "=== SQLab: Starting PostgreSQL via official entrypoint ==="
+PGDATA=/var/lib/postgresql/data
+PREBAKED=/var/lib/postgresql/prebaked
+
+# ── Phase 1: Restore pre-baked data if available ──
+# Docker VOLUME at $PGDATA prevents build-time persistence, so we store
+# pre-baked data at $PREBAKED and copy it to $PGDATA on first boot.
+if [ -d "$PREBAKED/base" ] && [ ! -f "$PGDATA/PG_VERSION" ]; then
+    echo "=== Restoring pre-baked database ==="
+    cp -a "$PREBAKED/." "$PGDATA/"
+    chown -R postgres:postgres "$PGDATA"
+    chmod 0700 "$PGDATA"
+    echo "=== Pre-baked data restored ==="
+fi
+
+# ── Phase 2: Start PostgreSQL ──
+echo "=== SQLab: Starting PostgreSQL ==="
 docker-entrypoint.sh postgres &
 PG_PID=$!
 
-# Wait for the REAL Postgres (after entrypoint finishes its init cycle).
-# The entrypoint creates a sentinel: /var/lib/postgresql/data/PG_VERSION exists
-# once initdb has run. But the safest approach is to wait for pg_isready
-# and then check the server has been up for more than 2 seconds (to skip
-# the temporary initdb server).
-echo "=== Waiting for PostgreSQL to be fully ready ==="
-sleep 5  # give the entrypoint time to start its init cycle
+echo "=== Waiting for PostgreSQL to be ready ==="
+sleep 2
 until pg_isready -U postgres -h localhost 2>/dev/null; do
-    sleep 2
+    sleep 1
 done
-# Double-check: wait a bit and verify still ready (not the temp server shutting down)
-sleep 3
+sleep 1
 until pg_isready -U postgres -h localhost 2>/dev/null; do
-    sleep 2
+    sleep 1
 done
 echo "=== PostgreSQL is ready ==="
 
-# ── Phase 2: Create the demo database and load the SQL dump ──
-echo "=== Creating demo database ==="
-createdb -U postgres demo 2>/dev/null || echo "Database 'demo' already exists, continuing"
-
-# Check if data already loaded (idempotent: skip if bookings schema exists)
+# Safety net: if data wasn't pre-baked, load it now (idempotent)
+createdb -U postgres demo 2>/dev/null || true
 LOADED=$(psql -U postgres -d demo -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'bookings'" 2>/dev/null || echo "")
 if [ "$LOADED" != "1" ]; then
-    echo "=== Loading Airlines demo SQL dump (this may take several minutes) ==="
-    # The dump contains DROP DATABASE which will fail — that's OK, just continue
-    psql -U postgres -d demo -f /app/data/demo-big-en-20170815.sql 2>&1 | tail -20 || true
+    echo "=== Data not pre-baked, loading SQL dump ==="
+    psql -U postgres -d demo -f /app/data/demo-big-en-20170815.sql 2>&1 | tail -5 || true
+    psql -U postgres -d demo -c "ALTER DATABASE demo SET search_path TO bookings, public;" 2>/dev/null || true
     echo "=== SQL dump loading complete ==="
 else
-    echo "=== Data already loaded, skipping ==="
+    echo "=== Pre-baked data detected, skipping load ==="
 fi
 
-# Set search_path to bookings schema for convenience
-psql -U postgres -d demo -c "ALTER DATABASE demo SET search_path TO bookings, public;" 2>/dev/null || true
-
 # ── Phase 3: Start FastAPI ──
-echo "=== Starting FastAPI server ==="
-exec /app/venv/bin/uvicorn sqlab.server.app:app --host 0.0.0.0 --port 8000
+echo "=== Starting FastAPI server on port ${PORT:-8000} ==="
+exec /app/venv/bin/uvicorn sqlab.server.app:app --host 0.0.0.0 --port ${PORT:-8000}
