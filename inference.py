@@ -6,13 +6,13 @@ Runs an LLM agent against all 17 SQLab tasks (PostgreSQL incident response)
 and reports per-task scores in the mandatory OpenEnv stdout format.
 
 Environment variables (MANDATORY):
-    API_BASE_URL   The API endpoint for the LLM (default: HF router)
-    MODEL_NAME     The model identifier to use for inference
-    HF_TOKEN       Your Hugging Face / API key (or API_KEY)
-    IMAGE_NAME     Docker image name for the SQLab environment
+    API_BASE_URL       The API endpoint for the LLM (default: HF router)
+    MODEL_NAME         The model identifier to use for inference (default: Qwen2.5-72B)
+    HF_TOKEN           Your Hugging Face / API key (no default — must be set)
+    IMAGE_NAME         Docker image name for the SQLab environment (no default — must be set)
 
 Usage:
-    IMAGE_NAME=sqlab MODEL_NAME=Qwen/Qwen2.5-72B-Instruct python -m sqlab.inference
+    IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
 """
 
 from __future__ import annotations
@@ -32,10 +32,10 @@ from sqlab.models import DBSreAction
 # Configuration — reads from environment variables per hackathon spec
 # ---------------------------------------------------------------------------
 
-IMAGE_NAME = os.getenv("IMAGE_NAME", "sqlab")
+IMAGE_NAME = os.getenv("IMAGE_NAME")  # No default — must be set explicitly
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 
 BENCHMARK = "sqlab"
 MAX_STEPS = 15
