@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlab"
+version = "0.1.0"
+description = "PostgreSQL incident response training environment for OpenEnv"
+requires-python = ">=3.11"
+dependencies = [
+    "openenv-core>=0.2.0",
+    "fastapi",
+    "uvicorn[standard]",
+    "psycopg2-binary",
+    "pydantic>=2.0",
+    "openai",
+]
+
+[project.scripts]
+server = "sqlab.server.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
