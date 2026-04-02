@@ -1,3 +1,12 @@
+---
+title: SQLab
+emoji: 💾
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # SQLab: Database Incident Response Training for LLM Agents
 
 SQL databases power nearly every production application — from booking systems to financial platforms. When they break, the symptoms are cryptic: queries that ran in milliseconds now take seconds, connections pile up until the pool is exhausted, transactions deadlock each other, and bloated tables silently degrade performance. Diagnosing these failures requires reading execution plans, inspecting lock graphs, and understanding how the query planner makes decisions — skills that take years to develop.
