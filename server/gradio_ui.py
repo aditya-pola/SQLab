@@ -384,7 +384,15 @@ div[class*="footer"], .built-with {
     display: none !important;
 }
 
-/* ── Match tab content width to header ── */
+/* ── Uniform width: pin the outermost container so all tabs match ── */
+.gradio-container > .main,
+.gradio-container > .main > .wrap {
+    max-width: 1200px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+}
 .gym-header {
     width: 100% !important;
     box-sizing: border-box !important;
@@ -393,12 +401,7 @@ div[class*="footer"], .built-with {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-}
-/* Force the tabs wrapper and header to share same parent constraints */
-.gradio-container > .main > .wrap,
-.gradio-container > .main > div {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
+    overflow: hidden !important;
 }
 
 /* ── Playground subblocks — CSS :has() with data-pg markers ── */
@@ -2180,10 +2183,9 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
             if not model_choices:
                 gr.HTML('<div style="text-align:center;padding:40px;color:#000">No demo results available yet.</div>')
             else:
-                with gr.Group():
-                    with gr.Row():
-                        trace_model = gr.Dropdown(choices=model_choices, label="Model", scale=2)
-                        trace_task = gr.Dropdown(choices=task_choices, label="Task", scale=2)
+                with gr.Row():
+                    trace_model = gr.Dropdown(choices=model_choices, label="Model", scale=2)
+                    trace_task = gr.Dropdown(choices=task_choices, label="Task", scale=2)
 
                 trace_display = gr.HTML(
                     '<div style="text-align:center;padding:40px;color:#000">Select a model and task to view the trace.</div>'
