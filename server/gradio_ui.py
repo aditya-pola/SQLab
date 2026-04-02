@@ -1962,7 +1962,7 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
                 is_resolved = metadata.get("is_resolved", False)
 
                 step = state["step"] + 1
-                cum_reward = state["cumulative_reward"] + reward
+                cum_reward = metadata.get("cumulative_reward", state["cumulative_reward"] + reward)
 
                 # Build REPL entry and append to log
                 repl_entry = _build_repl_entry(sql, output, error, reward)
@@ -2180,9 +2180,10 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
             if not model_choices:
                 gr.HTML('<div style="text-align:center;padding:40px;color:#000">No demo results available yet.</div>')
             else:
-                with gr.Row():
-                    trace_model = gr.Dropdown(choices=model_choices, label="Model", scale=2)
-                    trace_task = gr.Dropdown(choices=task_choices, label="Task", scale=2)
+                with gr.Group():
+                    with gr.Row():
+                        trace_model = gr.Dropdown(choices=model_choices, label="Model", scale=2)
+                        trace_task = gr.Dropdown(choices=task_choices, label="Task", scale=2)
 
                 trace_display = gr.HTML(
                     '<div style="text-align:center;padding:40px;color:#000">Select a model and task to view the trace.</div>'

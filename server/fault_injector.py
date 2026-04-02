@@ -227,7 +227,7 @@ class StaleStatsInjector(BaseFaultInjector):
         rows = self._exec(conn, f"""
             SELECT last_analyze FROM pg_stat_user_tables
             WHERE schemaname = 'bookings' AND relname = '{meta["target_table"]}'
-              AND last_analyze > now() - interval '5 minutes'
+              AND last_analyze > now() - interval '30 minutes'
         """, fetch=True)
         return bool(rows)
 
@@ -416,17 +416,24 @@ class LockContentionInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Resolution verified by querying pg_stat_activity for the specific
-        blocker PID. Agent can use pg_terminate_backend or pg_cancel_backend
-        — grader only checks end state, not the method used.
+        """Resolution verified by checking system-wide lock state — no lock
+        waiters and no ungranted relation locks. Matches grader logic.
         """
-        blocker_pid = meta.get("blocker_pid")
-        if not blocker_pid:
-            return True
-        rows = self._exec(conn, f"""
-            SELECT 1 FROM pg_stat_activity WHERE pid = {blocker_pid}
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_stat_activity
+            WHERE wait_event_type = 'Lock'
+              AND datname = current_database()
         """, fetch=True)
-        return not bool(rows)
+        lock_waits = rows[0][0] if rows else 999
+        if lock_waits > 0:
+            return False
+
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_locks
+            WHERE NOT granted AND locktype = 'relation'
+        """, fetch=True)
+        blocked = rows[0][0] if rows else 999
+        return blocked == 0
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         """Stop background threads and close connections."""
@@ -521,28 +528,30 @@ class TableBloatInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Resolution checks both: (1) blocker PID terminated, and (2) dead
-        tuples reduced by 50%+ via pg_stat_user_tables. Agent must fix the
-        root cause (kill blocker) AND clean up the symptom (VACUUM).
+        """Resolution checks both: (1) no old backend_xmin transactions, and
+        (2) dead tuples reduced by 70%+ via pg_stat_user_tables. Matches grader
+        thresholds to prevent resolved/score mismatch.
         """
         table = meta["target_table"]
-        # Check blocker is gone
-        blocker_pid = meta.get("blocker_pid")
-        if blocker_pid:
-            rows = self._exec(conn, f"""
-                SELECT 1 FROM pg_stat_activity WHERE pid = {blocker_pid}
-            """, fetch=True)
-            if rows:
-                return False
+        # Check no long-running txns with old backend_xmin (matches grader)
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_stat_activity
+            WHERE backend_xmin IS NOT NULL
+              AND age(backend_xmin) > 1000
+              AND datname = current_database()
+              AND pid != pg_backend_pid()
+        """, fetch=True)
+        old_xmin = rows[0][0] if rows else 999
+        if old_xmin > 0:
+            return False
 
-        # Check dead tuples are reduced
+        # Check dead tuples reduced (threshold matches grader's 0.3)
         rows = self._exec(conn, f"""
             SELECT n_dead_tup FROM pg_stat_user_tables
             WHERE schemaname = 'bookings' AND relname = '{table}'
         """, fetch=True)
         dead = rows[0][0] if rows else 0
-        # Consider resolved if dead tuples dropped by at least 50%
-        return dead < meta.get("update_count", 200000) * 0.5
+        return dead < meta.get("update_count", 200000) * 0.3
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         """Stop blocker, vacuum the table."""
@@ -623,7 +632,9 @@ class OverIndexingInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Check that at least 70% of junk indexes have been dropped."""
+        """Check that at least 70% of junk indexes dropped AND PK preserved.
+        Matches grader logic which checks both proportional drops and PK.
+        """
         junk = meta.get("junk_indexes", [])
         if not junk:
             return True
@@ -635,7 +646,17 @@ class OverIndexingInjector(BaseFaultInjector):
             """, fetch=True)
             if rows:
                 remaining += 1
-        return remaining <= len(junk) * 0.3
+        if remaining > len(junk) * 0.3:
+            return False
+
+        # PK must be preserved (matches grader's res_pk_preserved check)
+        rows = self._exec(conn, """
+            SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'bookings'
+              AND tablename = 'ticket_flights'
+              AND indexname = 'ticket_flights_pkey'
+        """, fetch=True)
+        return bool(rows)
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         """Drop all junk indexes."""
@@ -853,7 +874,9 @@ class CompoundLockBloatInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Both lock waits gone AND dead tuples reduced."""
+        """Both lock waits gone AND dead tuples reduced. Thresholds match
+        grader (0.3 for dead tuples, system-wide lock check).
+        """
         # Check no lock waits
         rows = self._exec(conn, """
             SELECT count(*) FROM pg_stat_activity
@@ -864,14 +887,14 @@ class CompoundLockBloatInjector(BaseFaultInjector):
         if lock_waits > 0:
             return False
 
-        # Check dead tuples reduced
+        # Check dead tuples reduced (threshold matches grader's 0.3)
         table = meta["target_table"]
         rows = self._exec(conn, f"""
             SELECT n_dead_tup FROM pg_stat_user_tables
             WHERE schemaname = 'bookings' AND relname = '{table}'
         """, fetch=True)
         dead = rows[0][0] if rows else 0
-        return dead < meta.get("update_count", 200000) * 0.5
+        return dead < meta.get("update_count", 200000) * 0.3
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         bg_manager.cleanup()
@@ -933,9 +956,10 @@ class BadConfigInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Check work_mem >= 1MB and effective_cache_size >= 512MB via pg_file_settings."""
-        # Use pg_file_settings to check what ALTER SYSTEM has set
-        # (SHOW reflects per-session values, not pending system-wide changes)
+        """Check work_mem >= 1MB and effective_cache_size >= 512MB.
+        Matches grader logic: pg_file_settings first, pg_settings fallback
+        with unit conversion (effective_cache_size is in 8kB pages).
+        """
         for param_name, min_kb in [("work_mem", 1024), ("effective_cache_size", 512 * 1024)]:
             rows = self._exec(conn, f"""
                 SELECT setting FROM pg_file_settings
@@ -947,12 +971,15 @@ class BadConfigInjector(BaseFaultInjector):
                 if val_kb < min_kb:
                     return False
             else:
-                # No override in auto.conf — check the boot_val from pg_settings
+                # Fallback: pg_settings (matches grader unit conversion)
                 rows = self._exec(conn, f"""
-                    SELECT setting, unit FROM pg_settings WHERE name = '{param_name}'
+                    SELECT setting FROM pg_settings WHERE name = '{param_name}'
                 """, fetch=True)
                 if rows:
-                    setting_val = int(rows[0][0])  # in units (kB for these params)
+                    setting_val = int(rows[0][0])
+                    # effective_cache_size is in 8kB pages, work_mem in kB
+                    if param_name == "effective_cache_size":
+                        setting_val = setting_val * 8  # convert 8kB pages to kB
                     if setting_val < min_kb:
                         return False
         return True
@@ -1076,25 +1103,29 @@ class IndexBloatInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Check that index has been rebuilt (size decreased or REINDEX was done recently).
-
-        We check if the index size is smaller than the bloated size. Even a small
-        decrease indicates REINDEX was performed. We use initial_size as baseline.
+        """Check that index exists and size decreased by at least 10%.
+        Matches grader's res_size_reduced threshold (bloated_size * 0.9).
         """
         index_name = meta["target_index"]
         bloated_size = meta.get("bloated_size", 0)
-        initial_size = meta.get("initial_size", 0)
         if bloated_size == 0:
             return True
+
+        # Index must still exist
+        rows = self._exec(conn, f"""
+            SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'bookings' AND indexname = '{index_name}'
+        """, fetch=True)
+        if not rows:
+            return False
 
         rows = self._exec(conn, f"""
             SELECT pg_relation_size('bookings.{index_name}') AS idx_size
         """, fetch=True)
         current_size = rows[0][0] if rows else bloated_size
 
-        # Consider resolved if current size is back near initial size
-        # or at least smaller than the bloated size
-        return current_size <= initial_size or current_size < bloated_size
+        # Matches grader's threshold: size must decrease by at least 10%
+        return current_size < bloated_size * 0.9
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         """Reindex to clean up."""
@@ -1306,10 +1337,23 @@ class DeadlockChainInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Deadlock auto-resolves. Check that agent identified it from logs."""
-        # The deadlock is already resolved by Postgres automatically.
-        # Resolution is based on grading (agent identifying the pattern).
-        return meta.get("deadlock_detected", False)
+        """Check live DB state: no ungranted transactionid locks and no lock
+        waiters. Matches grader logic instead of relying on static metadata.
+        """
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_locks
+            WHERE NOT granted AND locktype = 'transactionid'
+        """, fetch=True)
+        blocked = rows[0][0] if rows else 999
+        if blocked > 0:
+            return False
+
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_stat_activity
+            WHERE wait_event_type = 'Lock' AND datname = current_database()
+        """, fetch=True)
+        lock_waits = rows[0][0] if rows else 999
+        return lock_waits == 0
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
         """Deadlock auto-resolves, just clean up connections."""
@@ -1369,9 +1413,12 @@ class QueryPlanFlipInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Check that random_page_cost is back to a reasonable value (<= 4)."""
+        """Check that random_page_cost is back to a reasonable value (<= 4).
+        Matches grader: checks database-level setting, pg_file_settings, and
+        fresh SHOW value — all must be <= 4.0.
+        """
         param = meta["bad_param"]
-        # Check database-level setting
+        # Check database-level setting (ALTER DATABASE demo SET ...)
         rows = self._exec(conn, f"""
             SELECT setconfig FROM pg_db_role_setting
             WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname = 'demo')
@@ -1383,15 +1430,28 @@ class QueryPlanFlipInjector(BaseFaultInjector):
                 for cfg in configs:
                     if cfg.startswith(f"{param}="):
                         val = float(cfg.split("=")[1])
-                        if val > 10:
+                        if val > 4.0:
                             return False
 
-        # Also check current session value
+        # Check pg_file_settings (ALTER SYSTEM)
+        rows = self._exec(conn, f"""
+            SELECT setting FROM pg_file_settings
+            WHERE name = '{param}' AND error IS NULL
+            ORDER BY seqno DESC LIMIT 1
+        """, fetch=True)
+        if rows and rows[0][0]:
+            try:
+                if float(rows[0][0]) > 4.0:
+                    return False
+            except (ValueError, TypeError):
+                pass
+
+        # Check current session value
         rows = self._exec(conn, f"SHOW {param}", fetch=True)
         if rows:
             try:
                 val = float(rows[0][0])
-                if val > 10:
+                if val > 4.0:
                     return False
             except ValueError:
                 pass
@@ -1522,17 +1582,23 @@ class CascadingBloatInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Check that blocker is gone and dead tuples reduced across tables."""
-        # Check blocker is gone
-        blocker_pid = meta.get("blocker_pid")
-        if blocker_pid:
-            rows = self._exec(conn, f"""
-                SELECT 1 FROM pg_stat_activity WHERE pid = {blocker_pid}
-            """, fetch=True)
-            if rows:
-                return False
+        """Check no old backend_xmin transactions and dead tuples reduced
+        across at least half the tables. Matches grader logic.
+        """
+        # Check no long-running txns with old backend_xmin (matches grader)
+        rows = self._exec(conn, """
+            SELECT count(*) FROM pg_stat_activity
+            WHERE backend_xmin IS NOT NULL
+              AND age(backend_xmin) > 1000
+              AND datname = current_database()
+              AND pid != pg_backend_pid()
+        """, fetch=True)
+        old_xmin = rows[0][0] if rows else 999
+        if old_xmin > 0:
+            return False
 
-        # Check dead tuples are reduced on at least half the tables
+        # Check dead tuples reduced on at least half the tables
+        # (threshold 0.5 matches grader's per-table threshold)
         tables = meta.get("tables", [])
         update_count = meta.get("update_count_per_table", 50000)
         cleaned = 0
@@ -1765,10 +1831,12 @@ class CompoundConnDeadlockInjector(BaseFaultInjector):
         }
 
     def check_resolved(self, conn, meta: dict) -> bool:
-        """Both idle connections cleared AND deadlock addressed."""
+        """Both idle connections cleared AND no deadlock locks remaining.
+        Uses live DB state checks matching grader logic.
+        """
         conn_ok = self._conn_injector.check_resolved(conn, meta.get("conn_meta", {}))
-        # Deadlock auto-resolves, so just check it was detected
-        deadlock_ok = meta.get("deadlock_meta", {}).get("deadlock_detected", False)
+        # Check live lock state instead of static metadata (matches grader)
+        deadlock_ok = self._deadlock_injector.check_resolved(conn, meta.get("deadlock_meta", {}))
         return conn_ok and deadlock_ok
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):

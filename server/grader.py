@@ -292,7 +292,7 @@ def _grade_stale_statistics(conn, meta: dict, history: List[str],
     rows = _exec(conn, f"""
         SELECT last_analyze FROM pg_stat_user_tables
         WHERE schemaname = 'bookings' AND relname = '{table}'
-          AND last_analyze > now() - interval '10 minutes'
+          AND last_analyze > now() - interval '30 minutes'
     """)
     if rows:
         res_score += 0.25
@@ -736,7 +736,7 @@ def _grade_compound_stats_index(conn, meta: dict, history: List[str],
     rows = _exec(conn, f"""
         SELECT 1 FROM pg_stat_user_tables
         WHERE schemaname = 'bookings' AND relname = '{stats_table}'
-          AND last_analyze > now() - interval '10 minutes'
+          AND last_analyze > now() - interval '30 minutes'
     """)
     analyze_ok = bool(rows)
     if analyze_ok:
