@@ -496,11 +496,12 @@ class DBSreEnvironment(Environment[DBSreAction, DBSreObservation, DBSreState]):
         metrics = self._safe_metrics()
 
         # If done, compute final grader score
+        completion_bonus = None
         if done:
             self._grader_score = self._run_grader()
             # Add completion bonus based on grader score
             if self._grader_score is not None:
-                completion_bonus = self._grader_score * 0.5
+                completion_bonus = round(self._grader_score * 0.5, 4)
                 step_reward += completion_bonus
                 self._cumulative_reward += completion_bonus
 
@@ -519,6 +520,7 @@ class DBSreEnvironment(Environment[DBSreAction, DBSreObservation, DBSreState]):
                 "is_resolved": self._is_resolved,
                 "cumulative_reward": round(self._cumulative_reward, 4),
                 "grader_score": self._grader_score,
+                "completion_bonus": completion_bonus,
             },
         )
 

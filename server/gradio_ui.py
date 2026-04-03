@@ -452,6 +452,10 @@ div[class*="footer"], .built-with {
 /* ── Block 3: Grader — lime green (outer darker, inner lighter) ── */
 .gr-group:has([data-pg="grader"]) { background: #a3e635 !important; }
 .gr-group:has([data-pg="grader"]) > .styler { background: #d9f99d !important; }
+/* Task Selection — blocks inherit mint bg instead of generic peach */
+.gr-group:has([data-pg="task-select"]) .block {
+    background: transparent !important;
+}
 /* Align dropdown + Reset button vertically in Task Selection row */
 .gr-group:has([data-pg="task-select"]) .row {
     align-items: flex-end !important;

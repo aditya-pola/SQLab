@@ -468,9 +468,8 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
         "difficulty": "hard",
         "description": (
             "Two concurrent transactions are updating the same booking rows in "
-            "opposite order, causing a deadlock. PostgreSQL detects and kills one "
-            "victim automatically. Identify the deadlock pattern from error logs "
-            "and the conflicting PIDs."
+            "opposite order, causing a deadlock. The transactions are stuck waiting "
+            "on each other. Investigate the deadlock pattern and resolve the issue."
         ),
         "alert": ALERTS["deadlock_chain"],
         "params": {

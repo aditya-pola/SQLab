@@ -1248,9 +1248,9 @@ class WrongIndexOrderInjector(BaseFaultInjector):
 
 class DeadlockChainInjector(BaseFaultInjector):
     """Creates a real PostgreSQL deadlock between transactions updating rows
-    in opposite order. PostgreSQL auto-detects and kills one victim after
-    deadlock_timeout. Agent must identify the deadlock from pg_locks and
-    server logs, then diagnose the access pattern causing it.
+    in opposite order. Deadlock timeout is set to 300s per-session to prevent
+    PostgreSQL from auto-resolving. Agent must identify the deadlock from
+    pg_locks and pg_stat_activity, then terminate the appropriate backend.
     """
 
     # Thread-only fault — not pre-bakeable
@@ -1275,6 +1275,7 @@ class DeadlockChainInjector(BaseFaultInjector):
                 cur.execute("SELECT pg_backend_pid()")
                 pids["thread1"] = cur.fetchone()[0]
                 cur.execute("BEGIN")
+                cur.execute("SET LOCAL deadlock_timeout = '300s'")
                 cur.execute(f"UPDATE bookings.{table} SET total_amount = total_amount WHERE book_ref = '{ref_a}'")
                 time.sleep(1.5)  # Wait for thread2 to lock ref_b
                 cur.execute(f"UPDATE bookings.{table} SET total_amount = total_amount WHERE book_ref = '{ref_b}'")
@@ -1299,6 +1300,7 @@ class DeadlockChainInjector(BaseFaultInjector):
                 cur.execute("SELECT pg_backend_pid()")
                 pids["thread2"] = cur.fetchone()[0]
                 cur.execute("BEGIN")
+                cur.execute("SET LOCAL deadlock_timeout = '300s'")
                 cur.execute(f"UPDATE bookings.{table} SET total_amount = total_amount WHERE book_ref = '{ref_b}'")
                 time.sleep(1.5)  # Wait for thread1 to lock ref_a
                 cur.execute(f"UPDATE bookings.{table} SET total_amount = total_amount WHERE book_ref = '{ref_a}'")
@@ -1322,11 +1324,10 @@ class DeadlockChainInjector(BaseFaultInjector):
         bg_manager.add_thread(t1)
         bg_manager.add_thread(t2)
 
-        # Wait for deadlock to resolve (Postgres detects in ~1s)
-        t1.join(timeout=10.0)
-        t2.join(timeout=10.0)
+        # Wait for deadlock to establish (both threads grab first lock, block on second)
+        time.sleep(3.0)
 
-        logger.info("DeadlockChain: deadlock_detected=%s, pids=%s", deadlock_detected[0], pids)
+        logger.info("DeadlockChain: deadlock established (timeout=300s), pids=%s", pids)
         return {
             "target_table": table,
             "book_ref_a": ref_a,
@@ -1356,7 +1357,16 @@ class DeadlockChainInjector(BaseFaultInjector):
         return lock_waits == 0
 
     def cleanup(self, conn, meta: dict, bg_manager: BackgroundConnectionManager):
-        """Deadlock auto-resolves, just clean up connections."""
+        """Terminate deadlocked backends and clean up connections."""
+        pids = meta.get("pids", {})
+        for label in ("thread1", "thread2"):
+            pid = pids.get(label)
+            if pid:
+                try:
+                    self._exec(conn, f"SELECT pg_terminate_backend({pid})")
+                except Exception as e:
+                    logger.debug("DeadlockChain cleanup terminate %s (pid=%s): %s", label, pid, e)
+        time.sleep(0.5)
         bg_manager.cleanup()
 
 
