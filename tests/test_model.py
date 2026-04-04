@@ -38,30 +38,15 @@ You are given an alert about a database issue. Your job is to diagnose the probl
 and fix it by issuing SQL commands.
 
 IMPORTANT RULES:
-1. Respond with EXACTLY ONE SQL command per turn. No markdown, no explanations, no code fences.
-2. Just output the raw SQL command to execute.
-3. Use diagnostic queries first (EXPLAIN ANALYZE, pg_stat_activity, pg_locks, pg_stat_user_tables, SHOW, etc.)
-4. Then fix the issue (CREATE INDEX, ANALYZE, pg_terminate_backend, VACUUM, ALTER SYSTEM, SET, GRANT, SELECT setval(), DROP INDEX, etc.)
-5. After fixing, verify the fix with a diagnostic query.
+1. You may think and reason about the problem, but you MUST wrap your final SQL command in <sql> tags.
+2. Issue EXACTLY ONE SQL command per turn. Example: <sql>SELECT 1</sql>
+3. Start by diagnosing the issue using PostgreSQL system views and EXPLAIN ANALYZE.
+4. Then fix the root cause. For compound problems, fix ALL issues — not just one.
+5. Do NOT drop data tables or truncate data.
 6. You have at most 15 steps. Be efficient.
 7. The database is 'demo' with schema 'bookings'. Tables use bookings.table_name format.
 
-Common diagnostic patterns:
-- Missing index: EXPLAIN ANALYZE the slow query → CREATE INDEX → re-EXPLAIN
-- Stale stats: EXPLAIN ANALYZE → ANALYZE table → re-EXPLAIN
-- Connection exhaustion: SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction' → pg_terminate_backend → SET idle_in_transaction_session_timeout
-- Lock contention: SELECT * FROM pg_locks JOIN pg_stat_activity ... WHERE NOT granted → pg_terminate_backend on blocker
-- Table bloat: SELECT n_dead_tup FROM pg_stat_user_tables → find blocking xact → pg_terminate_backend → VACUUM
-- Over-indexing: SELECT indexrelname, idx_scan FROM pg_stat_user_indexes WHERE idx_scan = 0 → DROP INDEX
-- Bad config: SHOW work_mem; SHOW effective_cache_size → SET work_mem = '256MB'; SET effective_cache_size = '4GB'
-- Index bloat: Check index size vs expected → REINDEX INDEX
-- Wrong index order: EXPLAIN shows Seq Scan despite index → CREATE INDEX on correct column
-- Deadlock: Check pg_locks, pg_stat_activity for deadlock patterns → pg_terminate_backend
-- Query plan flip: SHOW random_page_cost → RESET random_page_cost or SET to reasonable value
-- Cascading bloat: Find long-running xact → terminate → VACUUM multiple tables
-- Permission error: Check pg_roles, information_schema.role_table_grants → GRANT SELECT ON table TO role
-- Sequence exhaustion: Check sequence value vs max PK → SELECT setval(seq, max_id)
-- Compound issues: Address BOTH problems
+REMEMBER: Always wrap your SQL in <sql>YOUR SQL HERE</sql> tags.
 """
 
 
@@ -113,18 +98,26 @@ def get_grader() -> dict:
 
 
 def extract_sql(response: str) -> str:
-    """Extract SQL from LLM response, stripping markdown fences if present."""
+    """Extract SQL from LLM response.
+
+    Priority order:
+    1. <sql>...</sql> tags (preferred — model was instructed to use these)
+    2. ```sql...``` markdown fences (fallback)
+    3. Raw text with non-SQL lines stripped (last resort)
+    """
     text = response.strip()
 
-    # Strip markdown code fences
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
+    # 1. Try <sql> tags first
+    match = re.search(r'<sql>(.*?)</sql>', text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
 
-    # Remove non-SQL lines (comments, empty)
+    # 2. Try markdown code fences anywhere in the response
+    fence_match = re.search(r'```(?:sql)?\s*\n?(.*?)```', text, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # 3. Fallback: strip non-SQL lines
     lines = [l.strip() for l in text.split("\n") if l.strip() and not l.strip().startswith("--")]
     if not lines:
         return text

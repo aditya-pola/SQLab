@@ -176,6 +176,7 @@ class StaleStatsInjector(BaseFaultInjector):
             "inject": [
                 "UPDATE bookings.flights SET status = 'Delayed' WHERE flight_id IN (SELECT flight_id FROM bookings.flights WHERE status = 'Arrived' LIMIT 100000)",
                 "DELETE FROM pg_statistic WHERE starelid = 'bookings.flights'::regclass",
+                "SELECT pg_stat_reset_single_table_counters('bookings.flights'::regclass)",
             ],
             "cleanup": [
                 "UPDATE bookings.flights SET status = 'Arrived' WHERE status = 'Delayed'",
@@ -210,6 +211,10 @@ class StaleStatsInjector(BaseFaultInjector):
             DELETE FROM pg_statistic
             WHERE starelid = 'bookings.{table}'::regclass
         """)
+
+        # Clear last_analyze timestamp so check_resolved doesn't see stale value
+        # from a previous episode's cleanup ANALYZE
+        self._exec(conn, f"SELECT pg_stat_reset_single_table_counters('bookings.{table}'::regclass)")
 
         logger.info("StaleStats: updated %d rows %s→%s, deleted pg_statistic", count, status_from, status_to)
         return {
@@ -694,6 +699,7 @@ class CompoundStatsIndexInjector(BaseFaultInjector):
                 # Stale stats part
                 "UPDATE bookings.flights SET status = 'Delayed' WHERE flight_id IN (SELECT flight_id FROM bookings.flights WHERE status = 'Arrived' LIMIT 100000)",
                 "DELETE FROM pg_statistic WHERE starelid = 'bookings.flights'::regclass",
+                "SELECT pg_stat_reset_single_table_counters('bookings.flights'::regclass)",
             ],
             "cleanup": [
                 # Restore index

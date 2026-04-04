@@ -1561,7 +1561,7 @@ def _readme_tab_html() -> str:
             Every fault in SQLab is modeled on real PostgreSQL failure modes: a missing
             index causing 100x query slowdowns, bloated tables blocking autovacuum, a misconfigured
             <code>work_mem</code> silently degrading every query on the server. These are the
-            same issues that production SREs encounter regularly.</p>
+            same issues that production SREs (Site Reliability Engineers) encounter regularly.</p>
         <p style="font-size:15px;line-height:1.7;margin:0 0 14px 0">
             The training database is the <a href="https://postgrespro.com/community/demodb" target="_blank" style="color:#1e40af;text-decoration:underline;font-weight:700">Airlines demo</a>: 20 million rows of flights, tickets,
             and bookings. Realistic enough that EXPLAIN plans behave like production, indexes
@@ -1652,8 +1652,8 @@ def _readme_tab_html() -> str:
     blocks.append(_block("#fecdd3", '''
         <h3 style="font-size:20px;font-weight:900;margin:0 0 14px 0">Baseline Results</h3>
         <p style="font-size:15px;line-height:1.7;margin:0 0 14px 0">
-            Six open-source models tested against all 17 tasks with anti-hack reward shaping.
-            Average scores range from 0.49 to 0.68. Full per-task breakdown in the <b>Leaderboard</b> tab.</p>
+            Five open-source models tested against all 17 tasks with anti-hack reward shaping.
+            Average scores range from 0.42 to 0.64. Full per-task breakdown in the <b>Leaderboard</b> tab.</p>
         <table style="width:auto;margin:0 auto;border-collapse:collapse;font-size:12px;font-weight:600">
             <tr style="background:#fff;border:2px solid #000">
                 <th style="padding:5px 10px;text-align:left;border:1px solid #000">Model</th>
@@ -1662,33 +1662,28 @@ def _readme_tab_html() -> str:
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Phi-4 14B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.680</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">7 / 17</td>
-            </tr>
-            <tr style="border:1px solid #000">
-                <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 14B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.668</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.635</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">8 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
+                <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 14B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.596</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">7 / 17</td>
+            </tr>
+            <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Devstral 15B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.642</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.595</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">6 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 7B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.515</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">5 / 17</td>
-            </tr>
-            <tr style="border:1px solid #000">
-                <td style="padding:5px 10px;border:1px solid #000">Qwen3 8B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.497</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">8 / 17</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.445</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">1 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">DeepSeek-Coder-V2 16B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.494</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">5 / 17</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.417</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">3 / 17</td>
             </tr>
         </table>
     '''))
@@ -1921,15 +1916,26 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
                     "disabled": [False, False, False],
                 }
 
+                # Build initial REPL content showing the system prompt and alert
+                init_log = (
+                    '<span style="color:#60a5fa">── System Prompt ──</span>\n'
+                    'You are an expert PostgreSQL Database SRE.\n'
+                    'Diagnose the problem and fix it by issuing SQL commands.\n'
+                    'Wrap your SQL in &lt;sql&gt; tags. One command per turn. 15 steps max.\n'
+                    'Database: demo | Schema: bookings\n\n'
+                    f'<span style="color:#60a5fa">── Alert ──</span>\n'
+                    f'{_escape(alert_text)}\n\n'
+                )
+
                 return (
                     f'<div class="alert-panel">{_escape(alert_text)}</div>',
                     '<div class="metric-card"><div class="metric-value">0 / 15</div><div class="metric-label">Step</div></div>',
                     '<div class="metric-card"><div class="metric-value">0.000</div><div class="metric-label">Reward</div></div>',
                     '<div class="metric-card"><div class="metric-value">Active</div><div class="metric-label">Status</div></div>',
-                    '<div class="repl-log" style="opacity:0.5">Ready. Type a SQL command to begin.</div>',
+                    f'<div class="repl-log">{init_log}</div>',
                     _metrics_html(metrics),
                     '<div style="color:#6b7280;font-size:13px">Complete an episode to see the grader breakdown.</div>',
-                    {"active": True, "step": 0, "cumulative_reward": 0.0, "obs_log_html": "", "done": False},
+                    {"active": True, "step": 0, "cumulative_reward": 0.0, "obs_log_html": init_log, "done": False},
                     _path_prompt_html(prompt, 0, total_steps),
                     gr.update(value=options[0][0], variant="secondary", interactive=True, elem_classes=["hint-pill"]),
                     gr.update(value=options[1][0], variant="secondary", interactive=True, elem_classes=["hint-pill"]),

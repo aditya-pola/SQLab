@@ -2,7 +2,7 @@
 SQLab — Baseline inference script for evaluating LLM agents.
 
 Uses OpenAI API to play all 17 SQLab tasks (PostgreSQL incident response)
-and report per-task scores. Baseline results from 6 models validate the
+and report per-task scores. Baseline results from 5 models validate the
 difficulty curve: easy tasks (0.7-1.0), medium tasks (0.4-0.9), hard compound
 tasks (0.3-0.7). This confirms SQLab is hard enough to challenge frontier
 models while remaining solvable enough to provide useful RL training signal.
@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 import time
 
@@ -26,17 +27,21 @@ from sqlab.models import DBSreAction
 # System prompt is deliberately minimal: establishes the SRE role and gives
 # 6 rules without task-specific hints. This tests the model's ability to
 # diagnose from the alert and metrics alone — the actual skill we want to train.
-SYSTEM_PROMPT = """You are an expert PostgreSQL DBA and Site Reliability Engineer.
-You are responding to a database incident. Your goal is to diagnose the root cause
-and fix it using SQL commands.
+SYSTEM_PROMPT = """You are an expert PostgreSQL Database SRE (Site Reliability Engineer).
+You are given an alert about a database issue. Your job is to diagnose the problem
+and fix it by issuing SQL commands.
 
 IMPORTANT RULES:
-1. Respond with ONLY a single SQL command — no explanations, no markdown.
-2. Start by diagnosing (EXPLAIN, pg_stat_activity, pg_locks, pg_indexes, etc.)
-3. Then fix the issue (CREATE INDEX, VACUUM, ANALYZE, pg_terminate_backend, etc.)
-4. Do NOT drop data tables or truncate data.
-5. For connection issues, also set a timeout to prevent recurrence.
-6. For compound problems, fix ALL issues — not just one."""
+1. You may think and reason about the problem, but you MUST wrap your final SQL command in <sql> tags.
+2. Issue EXACTLY ONE SQL command per turn. Example: <sql>SELECT 1</sql>
+3. Start by diagnosing the issue using PostgreSQL system views and EXPLAIN ANALYZE.
+4. Then fix the root cause. For compound problems, fix ALL issues — not just one.
+5. Do NOT drop data tables or truncate data.
+6. You have at most 15 steps. Be efficient.
+7. The database is 'demo' with schema 'bookings'. Tables use bookings.table_name format.
+
+REMEMBER: Always wrap your SQL in <sql>YOUR SQL HERE</sql> tags.
+"""
 
 
 def build_prompt(obs: dict) -> str:
@@ -66,20 +71,26 @@ def build_prompt(obs: dict) -> str:
 
 
 def extract_sql(text: str) -> str:
-    """Extract SQL from model response, stripping markdown code blocks.
+    """Extract SQL from model response.
 
-    Robust extraction handles bare SQL, ```sql blocks, and quoted strings.
-    This prevents format-related failures from contaminating baseline scores.
+    Priority order:
+    1. <sql>...</sql> tags (preferred — model was instructed to use these)
+    2. ```sql...``` markdown fences (fallback)
+    3. Raw text with quotes stripped (last resort)
     """
     text = text.strip()
-    if "```" in text:
-        blocks = text.split("```")
-        if len(blocks) >= 2:
-            code = blocks[1].strip()
-            if code.lower().startswith("sql"):
-                code = code[3:].strip()
-            return code
-    # Remove any leading/trailing quotes
+
+    # 1. Try <sql> tags first
+    match = re.search(r'<sql>(.*?)</sql>', text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+
+    # 2. Try markdown code fences anywhere in the response
+    fence_match = re.search(r'```(?:sql)?\s*\n?(.*?)```', text, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # 3. Fallback: strip quotes
     if text.startswith('"') and text.endswith('"'):
         text = text[1:-1]
     return text

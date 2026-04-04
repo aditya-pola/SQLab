@@ -124,18 +124,17 @@ Validated by **255 adversarial unit tests** (`test_reward_hacking.py`) covering 
 
 ## Baseline Results
 
-Six open-source models tested against all 17 tasks with anti-hack reward shaping (v4):
+Five open-source models tested against all 17 tasks with anti-hack reward shaping (v5):
 
 | Model | Total | Average | Resolved |
 |-------|-------|---------|----------|
-| Phi-4 14B | 11.552 / 17 | 0.680 | 7 / 17 |
-| Qwen2.5-Coder 14B | 11.352 / 17 | 0.668 | 8 / 17 |
-| Devstral 15B | 10.918 / 17 | 0.642 | 6 / 17 |
-| Qwen2.5-Coder 7B | 8.763 / 17 | 0.515 | 5 / 17 |
-| Qwen3 8B | 8.450 / 17 | 0.497 | 8 / 17 |
-| DeepSeek-Coder-V2 16B | 8.399 / 17 | 0.494 | 5 / 17 |
+| Phi-4 14B | 10.790 / 17 | 0.635 | 8 / 17 |
+| Devstral 15B | 10.117 / 17 | 0.595 | 6 / 17 |
+| Qwen2.5-Coder 14B | 10.131 / 17 | 0.596 | 7 / 17 |
+| Qwen2.5-Coder 7B | 7.568 / 17 | 0.445 | 1 / 17 |
+| DeepSeek-Coder-V2 16B | 7.082 / 17 | 0.417 | 3 / 17 |
 
-Scores range from 0.49 to 0.68 average, making SQLab hard enough to challenge frontier models but solvable enough to provide learning signal.
+Scores range from 0.42 to 0.64 average, making SQLab hard enough to challenge frontier models but solvable enough to provide learning signal.
 
 ## Architecture
 
