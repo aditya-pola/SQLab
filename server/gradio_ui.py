@@ -1662,8 +1662,8 @@ def _readme_tab_html() -> str:
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Phi-4 14B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.635</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">8 / 17</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.638</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">10 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 14B</td>
@@ -1672,7 +1672,7 @@ def _readme_tab_html() -> str:
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Devstral 15B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.595</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.609</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">6 / 17</td>
             </tr>
             <tr style="border:1px solid #000">

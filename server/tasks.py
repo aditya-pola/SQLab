@@ -361,7 +361,7 @@ TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
             "junk_pool": JUNK_INDEX_POOL,
         },
         "fatal_patterns": [],
-        "allowed_dangerous": [],
+        "allowed_dangerous": ["DROP INDEX"],
     },
     "task_10": {
         "name": "Index Bloat / Fragmented Index",

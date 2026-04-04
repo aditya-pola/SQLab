@@ -128,8 +128,8 @@ Five open-source models tested against all 17 tasks with anti-hack reward shapin
 
 | Model | Total | Average | Resolved |
 |-------|-------|---------|----------|
-| Phi-4 14B | 10.790 / 17 | 0.635 | 8 / 17 |
-| Devstral 15B | 10.117 / 17 | 0.595 | 6 / 17 |
+| Phi-4 14B | 10.847 / 17 | 0.638 | 10 / 17 |
+| Devstral 15B | 10.349 / 17 | 0.609 | 6 / 17 |
 | Qwen2.5-Coder 14B | 10.131 / 17 | 0.596 | 7 / 17 |
 | Qwen2.5-Coder 7B | 7.568 / 17 | 0.445 | 1 / 17 |
 | DeepSeek-Coder-V2 16B | 7.082 / 17 | 0.417 | 3 / 17 |
