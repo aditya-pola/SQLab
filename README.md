@@ -9,6 +9,8 @@ pinned: false
 
 # SQLab: Database Incident Response Training for LLM Agents
 
+**[Try the live demo](https://huggingface.co/spaces/stvident/sqlab)**
+
 SQL databases power nearly every production application — from booking systems to financial platforms. When they break, the symptoms are cryptic: queries that ran in milliseconds now take seconds, connections pile up until the pool is exhausted, transactions deadlock each other, and bloated tables silently degrade performance. Diagnosing these failures requires reading execution plans, inspecting lock graphs, and understanding how the query planner makes decisions — skills that take years to develop.
 
 SQLab is an OpenEnv environment where LLM agents learn these skills. It presents **17 production-realistic PostgreSQL faults** — missing indexes, stale statistics, deadlock chains, cascading bloat, misconfigured parameters, and more — against a live database with 20 million rows of airline booking data. The agent receives an alert, has 15 steps to investigate and fix the issue using raw SQL, and is scored by a deterministic grader on diagnosis, resolution, and best practices (0–1 scale, fully reproducible, no LLM judge).
