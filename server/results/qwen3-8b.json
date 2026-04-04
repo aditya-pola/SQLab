@@ -1,0 +1,1553 @@
+{
+  "model": "qwen3:8b",
+  "timestamp": "2026-04-04T08:19:55.044548",
+  "summary": {
+    "total_tasks": 17,
+    "total_score": 6.6275,
+    "average_score": 0.3899,
+    "resolved_count": 6
+  },
+  "results": [
+    {
+      "task_id": "task_1",
+      "task_name": "Missing Index",
+      "difficulty": "easy",
+      "fault_type": "missing_index",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 9,
+      "elapsed_s": 124.8,
+      "grader_breakdown": null,
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_id, tf.flight_id, t.ticket_number, f.flight_number FROM ticket_flights tf JOIN tickets t ON tf.ticket_id = t.id JOIN flights f ON tf.flight_id = f.id WHERE tf.ticket_id = 'some_value';",
+          "output": null,
+          "error": "ERROR: column tf.ticket_id does not exist\nLINE 1: ...t_number FROM ticket_flights tf JOIN tickets t ON tf.ticket_...\n                                                             ^\nHINT:  Perhaps you meant to reference the column \"tf.ticket_no\".",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_no, t.ticket_number, f.flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.id JOIN bookings.flights f ON tf.flight_no = f.id WHERE tf.ticket_no = 'some_value';",
+          "output": null,
+          "error": "ERROR: column t.id does not exist\nLINE 1: ...ghts tf JOIN bookings.tickets t ON tf.ticket_no = t.id JOIN ...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_no, t.ticket_number, f.flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_id JOIN bookings.flights f ON tf.flight_no = f.flight_id WHERE tf.ticket_no = 'some_value';",
+          "output": null,
+          "error": "ERROR: column t.ticket_id does not exist\nLINE 1: ...ghts tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_i...\n                                                             ^\nHINT:  Perhaps you meant to reference the column \"t.ticket_no\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_no, t.ticket_number, f.flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_no JOIN bookings.flights f ON tf.flight_no = f.flight_id WHERE tf.ticket_no = 'some_value';",
+          "output": null,
+          "error": "ERROR: column tf.flight_no does not exist\nLINE 1: ...icket_no = t.ticket_no JOIN bookings.flights f ON tf.flight_...\n                                                             ^\nHINT:  Perhaps you meant to reference the column \"f.flight_no\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, t.ticket_number, f.flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_no JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = 'some_value';",
+          "output": null,
+          "error": "ERROR: column t.ticket_number does not exist\nLINE 1: ...XPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, t.ticket_n...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, t.ticket_no AS ticket_number, f.flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_no JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = 'some_value';",
+          "output": null,
+          "error": "ERROR: column f.flight_number does not exist\nLINE 1: ...t_no, tf.flight_id, t.ticket_no AS ticket_number, f.flight_n...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT column_name FROM information_schema.columns WHERE table_schema = 'bookings' AND table_name IN ('ticket_flights', 'tickets', 'flights');",
+          "output": "column_name\n-----------\nflight_id\nflight_no\nscheduled_departure\nscheduled_arrival\ndeparture_airport\narrival_airport\nstatus\naircraft_code\nactual_departure\nactual_arrival\nticket_no\nflight_id\nfare_conditions\namount\nticket_no\nbook_ref\npassenger_id\npassenger_name\ncontact_data\n(19 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, t.ticket_no AS ticket_number, f.flight_no AS flight_number FROM bookings.ticket_flights tf JOIN bookings.tickets t ON tf.ticket_no = t.ticket_no JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = 'some_value';",
+          "output": "QUERY PLAN\n----------\nNested Loop  (cost=1.41..42.40 rows=3 width=39) (actual time=0.089..0.091 rows=0 loops=1)\n  ->  Index Only Scan using tickets_pkey on tickets t  (cost=0.43..8.45 rows=1 width=14) (actual time=0.088..0.089 rows=0 loops=1)\n        Index Cond: (ticket_no = 'some_value'::bpchar)\n        Heap Fetches: 0\n  ->  Nested Loop  (cost=0.98..33.93 rows=3 width=25) (never executed)\n        ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..8.61 rows=3 width=1",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_2",
+      "task_name": "Stale Statistics",
+      "difficulty": "easy",
+      "fault_type": "stale_statistics",
+      "is_resolved": true,
+      "grader_score": 0.85,
+      "steps_used": 5,
+      "elapsed_s": 54.5,
+      "grader_breakdown": {
+        "inv_explain": 0.1,
+        "id_target_table": 0.1,
+        "id_stale_stats": 0.1,
+        "res_analyze_ran": 0.25,
+        "res_estimates_accurate": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_targeted_analyze": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM pg_catalog.pg_indexes WHERE tablename = 'flights' AND schemaname = 'bookings';",
+          "output": "schemaname | tablename | indexname | tablespace | indexdef\n-----------+-----------+-----------+------------+---------\nbookings | flights | flights_flight_no_scheduled_departure_key | NULL | CREATE UNIQUE INDEX flights_flight_no_scheduled_departure_key ON bookings.flights USING btree (flight_no, scheduled_departure)\nbookings | flights | flights_pkey | NULL | CREATE UNIQUE INDEX flights_pkey ON bookings.flights USING btree (flight_id)\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.flights WHERE status = 'landed';",
+          "output": "QUERY PLAN\n----------\nGather  (cost=1000.00..6662.81 rows=1580 width=170) (actual time=30.350..35.049 rows=0 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  ->  Parallel Seq Scan on flights  (cost=0.00..5504.81 rows=658 width=170) (actual time=25.420..25.421 rows=0 loops=3)\n        Filter: ((status)::text = 'landed'::text)\n        Rows Removed by Filter: 71622\nPlanning Time: 0.468 ms\nExecution Time: 35.074 ms\n(8 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "CREATE INDEX idx_flights_status ON bookings.flights USING btree (status);",
+          "output": "CREATE INDEX",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.flights WHERE status = 'landed';",
+          "output": "QUERY PLAN\n----------\nBitmap Heap Scan on flights  (cost=12.62..2399.58 rows=1074 width=170) (actual time=0.058..0.058 rows=0 loops=1)\n  Recheck Cond: ((status)::text = 'landed'::text)\n  ->  Bitmap Index Scan on idx_flights_status  (cost=0.00..12.35 rows=1074 width=0) (actual time=0.055..0.055 rows=0 loops=1)\n        Index Cond: ((status)::text = 'landed'::text)\nPlanning Time: 0.335 ms\nExecution Time: 0.091 ms\n(6 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "ANALYZE bookings.flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.475,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_3",
+      "task_name": "Connection Exhaustion",
+      "difficulty": "easy",
+      "fault_type": "connection_exhaustion",
+      "is_resolved": false,
+      "grader_score": 0.7,
+      "steps_used": 15,
+      "elapsed_s": 140.1,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_max_conn": 0.1,
+        "id_idle_sessions": 0.1,
+        "id_terminate_idle": 0.1,
+        "res_idle_terminated": 0.2,
+        "_efficiency_mult": 0.75,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_targeted_terminate": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT (SELECT setting FROM pg_settings WHERE name = 'max_connections') AS max_connections, (SELECT COUNT(*) FROM pg_stat_activity WHERE state != 'idle') AS active_connections;",
+          "output": "max_connections | active_connections\n----------------+-------------------\n100 | 82\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT COUNT(*) AS total_connections FROM pg_stat_activity;",
+          "output": "total_connections\n-----------------\n88\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT COUNT(*) AS idle_in_transaction FROM pg_stat_activity WHERE state = 'idle in transaction';",
+          "output": "idle_in_transaction\n-------------------\n81\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT pid, usename, state, query FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY pid;",
+          "output": "pid | usename | state | query\n------+---------+-------+------\n120 | postgres | idle in transaction | SELECT 1\n121 | postgres | idle in transaction | SELECT 1\n122 | postgres | idle in transaction | SELECT 1\n123 | postgres | idle in transaction | SELECT 1\n124 | postgres | idle in transaction | SELECT 1\n125 | postgres | idle in transaction | SELECT 1\n126 | postgres | idle in transaction | SELECT 1\n127 | postgres | idle in transaction | SELECT 1\n128 | postgres | idle in transaction | SELECT 1\n129 | ",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND pid > 0;",
+          "output": "pg_terminate_backend\n--------------------\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\n(81 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT COUNT(*) AS remaining_connections FROM pg_stat_activity WHERE state != 'idle' AND pid > 0;",
+          "output": "remaining_connections\n---------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT pid, usename, state, query FROM pg_stat_activity WHERE state != 'idle' AND pid > 0;",
+          "output": "pid | usename | state | query\n------+---------+-------+------\n201 | postgres | active | SELECT pid, usename, state, query FROM pg_stat_activity WHERE state != 'idle' AND pid > 0;\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT pg_terminate_backend(201);",
+          "output": null,
+          "error": "ERROR: server closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT SET LOCAL statement_timeout = '5s';",
+          "output": null,
+          "error": "ERROR: syntax error at or near \"statement_timeout\"\nLINE 1: SELECT SET LOCAL statement_timeout = '5s';\n                         ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT COUNT(*) AS remaining_connections FROM pg_stat_activity WHERE pid > 0;",
+          "output": "remaining_connections\n---------------------\n7\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT pid, usename, state, query FROM pg_stat_activity WHERE pid > 0 ORDER BY state, pid;",
+          "output": "pid | usename | state | query\n------+---------+-------+------\n206 | postgres | active | SELECT pid, usename, state, query FROM pg_stat_activity WHERE pid > 0 ORDER BY state, pid;\n103 | postgres | idle | \n            SELECT count(*) as cnt\n            FROM pg_indexes\n            WHERE schemaname = 'bookings' AND tablename = 'ticket_flights'\n        \n32 | NULL | NULL | \n33 | NULL | NULL | \n35 | NULL | NULL | \n36 | NULL | NULL | \n37 | postgres | NULL | \n(7 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid > 0 AND state != 'idle' AND pid != pg_backend_pid();",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid > 0 AND state != 'idle' AND pid != pg_backend_pid();",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT SET LOCAL max_connections = 200;",
+          "output": null,
+          "error": "ERROR: syntax error at or near \"max_connections\"\nLINE 1: SELECT SET LOCAL max_connections = 200;\n                         ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid > 0 AND state != 'idle' AND pid != pg_backend_pid();",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.31999999999999995,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_4",
+      "task_name": "Permission / Role Error",
+      "difficulty": "easy",
+      "fault_type": "permission_error",
+      "is_resolved": true,
+      "grader_score": 1.0,
+      "steps_used": 5,
+      "elapsed_s": 32.5,
+      "grader_breakdown": {
+        "inv_checked_grants": 0.1,
+        "inv_checked_role": 0.1,
+        "id_target_table": 0.1,
+        "id_target_role": 0.1,
+        "res_permission_granted": 0.4,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_minimal_grants": 0.05,
+        "bp_schema_usage": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM information_schema.role_table_grants\nWHERE table_name = 'ticket_flights' AND table_schema = 'bookings' AND grantee = 'app_user' AND privilege_type = 'SELECT';",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.1,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT rolname FROM pg_roles WHERE rolname = 'app_user';",
+          "output": "rolname\n-------\napp_user\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT * FROM information_schema.schema_privileges\nWHERE schema_name = 'bookings' AND grantee = 'app_user' AND privilege_type = 'USAGE';",
+          "output": null,
+          "error": "ERROR: relation \"information_schema.schema_privileges\" does not exist\nLINE 1: SELECT * FROM information_schema.schema_privileges\n                      ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT * FROM information_schema.table_privileges\nWHERE table_schema = 'bookings' AND table_name = 'ticket_flights' AND grantee = 'app_user';",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "GRANT SELECT ON TABLE bookings.ticket_flights TO app_user;",
+          "output": "GRANT",
+          "error": null,
+          "reward": 0.5,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_5",
+      "task_name": "Sequence Exhaustion / PK Conflict",
+      "difficulty": "easy",
+      "fault_type": "sequence_exhaustion",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 5,
+      "elapsed_s": 65.5,
+      "grader_breakdown": {
+        "inv_checked_grants": 0.1,
+        "inv_checked_role": 0.1,
+        "id_target_table": 0.1,
+        "id_target_role": 0.1,
+        "res_permission_granted": 0.4,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_minimal_grants": 0.05,
+        "bp_schema_usage": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    (SELECT last_value FROM pg_sequences WHERE sequencename = 'flights_flight_id_seq') AS current_last_value,\n    (SELECT MAX(flight_id) FROM bookings.flights) AS max_flight_id",
+          "output": "current_last_value | max_flight_id\n-------------------+--------------\nNULL | 214867\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT \n    seq.last_value,\n    seq.is_called,\n    seq.increment_by,\n    seq.last_value + seq.increment_by AS next_value,\n    (SELECT MAX(flight_id) FROM bookings.flights) AS max_flight_id\nFROM \n    pg_sequences seq\nWHERE \n    seq.sequencename = 'flights_flight_id_seq';",
+          "output": null,
+          "error": "ERROR: column seq.is_called does not exist\nLINE 3:     seq.is_called,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    seq.last_value,\n    seq.increment_by,\n    seq.allocated_cache,\n    (SELECT MAX(flight_id) FROM bookings.flights) AS max_flight_id\nFROM \n    pg_sequences seq\nWHERE \n    seq.sequencename = 'flights_flight_id_seq';",
+          "output": null,
+          "error": "ERROR: column seq.allocated_cache does not exist\nLINE 4:     seq.allocated_cache,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    seq.last_value,\n    seq.increment_by,\n    (SELECT MAX(flight_id) FROM bookings.flights) AS max_flight_id\nFROM \n    pg_sequences seq\nWHERE \n    seq.sequencename = 'flights_flight_id_seq';",
+          "output": "last_value | increment_by | max_flight_id\n-----------+--------------+--------------\nNULL | 1 | 214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_6",
+      "task_name": "Bad Configuration",
+      "difficulty": "medium",
+      "fault_type": "bad_config",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 7,
+      "elapsed_s": 93.1,
+      "grader_breakdown": {
+        "inv_checked_grants": 0.1,
+        "inv_checked_role": 0.1,
+        "id_target_table": 0.1,
+        "id_target_role": 0.1,
+        "res_permission_granted": 0.4,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_minimal_grants": 0.05,
+        "bp_schema_usage": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM pg_stat_temp_files;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_temp_files\" does not exist\nLINE 1: SELECT * FROM pg_stat_temp_files;\n                      ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT * FROM pg_stat_database;",
+          "output": "datid | datname | numbackends | xact_commit | xact_rollback | blks_read | blks_hit | tup_returned | tup_fetched | tup_inserted | tup_updated | tup_deleted | conflicts | temp_files | temp_bytes | deadlocks | checksum_failures | checksum_last_failure | blk_read_time | blk_write_time | session_time | active_time | idle_in_transaction_time | sessions | sessions_abandoned | sessions_fatal | sessions_killed | stats_reset\n------+---------+-------------+-------------+---------------+-----------+--------",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SHOW work_mem;",
+          "output": "work_mem\n--------\n64kB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SET LOCAL work_mem = '256MB';",
+          "output": "SET",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT * FROM pg_stat_temp_files;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_temp_files\" does not exist\nLINE 1: SELECT * FROM pg_stat_temp_files;\n                      ^",
+          "reward": -0.08,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT * FROM pg_stat_database WHERE datname = 'demo';",
+          "output": "datid | datname | numbackends | xact_commit | xact_rollback | blks_read | blks_hit | tup_returned | tup_fetched | tup_inserted | tup_updated | tup_deleted | conflicts | temp_files | temp_bytes | deadlocks | checksum_failures | checksum_last_failure | blk_read_time | blk_write_time | session_time | active_time | idle_in_transaction_time | sessions | sessions_abandoned | sessions_fatal | sessions_killed | stats_reset\n------+---------+-------------+-------------+---------------+-----------+--------",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_7",
+      "task_name": "Lock Contention",
+      "difficulty": "medium",
+      "fault_type": "lock_contention",
+      "is_resolved": true,
+      "grader_score": 0.9,
+      "steps_used": 4,
+      "elapsed_s": 63.4,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_blocker_pattern": 0.1,
+        "id_target_table": 0.1,
+        "res_no_lock_waits": 0.25,
+        "res_no_blocked_queries": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted\nFROM \n    pg_locks\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_locks.relation = (SELECT oid FROM pg_class WHERE relname = 'bookings')\n    AND pg_locks.granted = false;",
+          "output": "pid | query | state | locktype | mode | granted\n------+-------+-------+----------+-------+--------\n225 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active | tuple | ExclusiveLock | False\n227 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active | tuple | ExclusiveLock | False\n(2 rows)",
+          "error": null,
+          "reward": 0.02,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT book_ref, total_amount FROM bookings.bookings WHERE book_ref = '361A07';",
+          "output": "book_ref | total_amount\n---------+-------------\n361A07 | 7200.00\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "EXPLAIN ANALYZE UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07';",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted,\n    pg_stat_activity.query_start\nFROM \n    pg_locks\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_locks.relation = (SELECT oid FROM pg_class WHERE relname = 'bookings')\n    AND pg_locks.granted = false\n    AND pg_stat_activity.state = 'active';",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.42000000000000004,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_8",
+      "task_name": "Table Bloat / Vacuum Stuck",
+      "difficulty": "medium",
+      "fault_type": "table_bloat",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 4,
+      "elapsed_s": 49.8,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_blocker_pattern": 0.1,
+        "id_target_table": 0.1,
+        "res_no_lock_waits": 0.25,
+        "res_no_blocked_queries": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT dead_tup_count FROM bookings.pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": null,
+          "error": "ERROR: relation \"bookings.pg_stat_user_tables\" does not exist\nLINE 1: SELECT dead_tup_count FROM bookings.pg_stat_user_tables WHER...\n                                   ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT dead_tup_count FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": null,
+          "error": "ERROR: column \"dead_tup_count\" does not exist\nLINE 1: SELECT dead_tup_count FROM pg_stat_user_tables WHERE relname...\n               ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT n_dead_tup FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": "n_dead_tup\n----------\n10001\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_9",
+      "task_name": "Over-Indexing",
+      "difficulty": "medium",
+      "fault_type": "over_indexing",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 2,
+      "elapsed_s": 40.5,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_blocker_pattern": 0.1,
+        "id_target_table": 0.1,
+        "res_no_lock_waits": 0.25,
+        "res_no_blocked_queries": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM pg_locks WHERE relname = 'bookings.ticket_flights' AND mode NOT IN ('ACCESS SHARE', 'SHARED');",
+          "output": null,
+          "error": "ERROR: column \"relname\" does not exist\nLINE 1: SELECT * FROM pg_locks WHERE relname = 'bookings.ticket_flig...\n                                     ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_10",
+      "task_name": "Index Bloat / Fragmented Index",
+      "difficulty": "medium",
+      "fault_type": "index_bloat",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 9,
+      "elapsed_s": 98.1,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_blocker_pattern": 0.1,
+        "id_target_table": 0.1,
+        "res_no_lock_waits": 0.25,
+        "res_no_blocked_queries": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM pg_indexes WHERE tablename = 'ticket_flights';",
+          "output": "schemaname | tablename | indexname | tablespace | indexdef\n-----------+-----------+-----------+------------+---------\nbookings | ticket_flights | ticket_flights_pkey | NULL | CREATE UNIQUE INDEX ticket_flights_pkey ON bookings.ticket_flights USING btree (ticket_no, flight_id)\nbookings | ticket_flights | idx_ticket_flights_flight | NULL | CREATE INDEX idx_ticket_flights_flight ON bookings.ticket_flights USING btree (flight_id)\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_relation_size('bookings.ticket_flights_pkey') AS pkey_size, pg_relation_size('bookings.idx_ticket_flights_flight') AS flight_idx_size;",
+          "output": "pkey_size | flight_idx_size\n----------+----------------\n342695936 | 63815680\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE tablename = 'ticket_flights';",
+          "output": null,
+          "error": "ERROR: column \"tablename\" does not exist\nLINE 1: SELECT * FROM pg_stat_user_indexes WHERE tablename = 'ticket...\n                                                 ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 0 | NULL | 0 | 0\n16434 | 16515 | bookings | ticket_flights | idx_ticket_flights_flight | 0 | NULL | 0 | 0\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "EXPLAIN ANALYZE SELECT COUNT(*) FROM bookings.ticket_flights WHERE flight_id = 'FL123';",
+          "output": null,
+          "error": "ERROR: invalid input syntax for type integer: \"FL123\"\nLINE 1: ...T(*) FROM bookings.ticket_flights WHERE flight_id = 'FL123';\n                                                               ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT data_type FROM information_schema.columns WHERE table_schema = 'bookings' AND table_name = 'ticket_flights' AND column_name = 'flight_id';",
+          "output": "data_type\n---------\ninteger\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "EXPLAIN ANALYZE SELECT COUNT(*) FROM bookings.ticket_flights WHERE flight_id = 123;",
+          "output": "QUERY PLAN\n----------\nAggregate  (cost=33.35..33.36 rows=1 width=8) (actual time=0.116..0.117 rows=1 loops=1)\n  ->  Index Only Scan using idx_ticket_flights_flight on ticket_flights  (cost=0.43..33.10 rows=103 width=0) (actual time=0.110..0.110 rows=0 loops=1)\n        Index Cond: (flight_id = 123)\n        Heap Fetches: 0\nPlanning Time: 0.341 ms\nExecution Time: 0.162 ms\n(6 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_11",
+      "task_name": "Wrong Index Column Order",
+      "difficulty": "medium",
+      "fault_type": "wrong_index_order",
+      "is_resolved": true,
+      "grader_score": 0.95,
+      "steps_used": 4,
+      "elapsed_s": 31.4,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "inv_checked_indexes": 0.1,
+        "id_column_order": 0.1,
+        "id_composite_key": 0.1,
+        "res_standalone_index": 0.2,
+        "res_plan_improved": 0.2,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_pk_preserved": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT * FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings';",
+          "output": "schemaname | tablename | indexname | tablespace | indexdef\n-----------+-----------+-----------+------------+---------\nbookings | ticket_flights | ticket_flights_pkey | NULL | CREATE UNIQUE INDEX ticket_flights_pkey ON bookings.ticket_flights USING btree (ticket_no, flight_id)\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 'some_value';",
+          "output": null,
+          "error": "ERROR: invalid input syntax for type integer: \"some_value\"\nLINE 1: ... * FROM bookings.ticket_flights WHERE flight_id = 'some_valu...\n                                                             ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 1;",
+          "output": "QUERY PLAN\n----------\nGather  (cost=1000.00..114993.91 rows=103 width=32) (actual time=354.626..360.130 rows=0 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  ->  Parallel Seq Scan on ticket_flights  (cost=0.00..113983.61 rows=43 width=32) (actual time=327.425..327.426 rows=0 loops=3)\n        Filter: (flight_id = 1)\n        Rows Removed by Filter: 2797284\nPlanning Time: 0.444 ms\nJIT:\n  Functions: 6\n  Options: Inlining false, Optimization false, Expressions true, Deforming true\n  Timing: Ge",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "CREATE INDEX idx_ticket_flights_flight_id ON bookings.ticket_flights USING btree (flight_id);",
+          "output": "CREATE INDEX",
+          "error": null,
+          "reward": 0.575,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_12",
+      "task_name": "Compound: Stale Stats + Missing Index",
+      "difficulty": "hard",
+      "fault_type": "compound_stats_index",
+      "is_resolved": true,
+      "grader_score": 0.9,
+      "steps_used": 8,
+      "elapsed_s": 100.8,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "inv_checked_catalogs": 0.1,
+        "id_missing_index": 0.1,
+        "id_stale_stats": 0.1,
+        "res_index_created": 0.2,
+        "res_analyze_ran": 0.15,
+        "res_fully_resolved": 0.05,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT * FROM ticket_flights JOIN flights ON ticket_flights.flight_id = flights.flight_id;",
+          "output": "QUERY PLAN\n----------\nHash Join  (cost=13665.64..309574.28 rows=8391852 width=202) (actual time=127.014..7780.938 rows=8391852 loops=1)\n  Hash Cond: (ticket_flights.flight_id = flights.flight_id)\n  ->  Seq Scan on ticket_flights  (cost=0.00..154684.52 rows=8391852 width=32) (actual time=0.039..915.047 rows=8391852 loops=1)\n  ->  Hash  (cost=6920.95..6920.95 rows=182695 width=170) (actual time=126.393..126.395 rows=214867 loops=1)\n        Buckets: 65536  Batches: 8  Memory Usage: 3223kB\n        -",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT indexname FROM pg_indexes WHERE tablename = 'ticket_flights' AND indexname = 'ticket_flights_flight_id_idx';",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "CREATE INDEX ticket_flights_flight_id_idx ON bookings.ticket_flights(flight_id);",
+          "output": "CREATE INDEX",
+          "error": null,
+          "reward": 0.1,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "EXPLAIN ANALYZE SELECT * FROM ticket_flights JOIN flights ON ticket_flights.flight_id = flights.flight_id;",
+          "output": "QUERY PLAN\n----------\nHash Join  (cost=13665.64..309525.47 rows=8390045 width=202) (actual time=115.685..7554.295 rows=8391852 loops=1)\n  Hash Cond: (ticket_flights.flight_id = flights.flight_id)\n  ->  Seq Scan on ticket_flights  (cost=0.00..154666.45 rows=8390045 width=32) (actual time=0.020..850.706 rows=8391852 loops=1)\n  ->  Hash  (cost=6920.95..6920.95 rows=182695 width=170) (actual time=115.383..115.384 rows=214867 loops=1)\n        Buckets: 65536  Batches: 8  Memory Usage: 3223kB\n        -",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "CREATE INDEX flights_flight_id_idx ON bookings.flights(flight_id);",
+          "output": "CREATE INDEX",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "EXPLAIN ANALYZE SELECT * FROM ticket_flights JOIN flights ON ticket_flights.flight_id = flights.flight_id;",
+          "output": "QUERY PLAN\n----------\nHash Join  (cost=15174.51..311819.26 rows=8390045 width=202) (actual time=114.443..7488.937 rows=8391852 loops=1)\n  Hash Cond: (ticket_flights.flight_id = flights.flight_id)\n  ->  Seq Scan on ticket_flights  (cost=0.00..154666.45 rows=8390045 width=32) (actual time=0.023..854.121 rows=8391852 loops=1)\n  ->  Hash  (cost=7242.67..7242.67 rows=214867 width=170) (actual time=114.125..114.127 rows=214867 loops=1)\n        Buckets: 65536  Batches: 8  Memory Usage: 3223kB\n        -",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "ANALYZE bookings.flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.45,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_13",
+      "task_name": "Compound: Lock + Bloat",
+      "difficulty": "hard",
+      "fault_type": "compound_lock_bloat",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 14,
+      "elapsed_s": 213.0,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "inv_checked_catalogs": 0.1,
+        "id_missing_index": 0.1,
+        "id_stale_stats": 0.1,
+        "res_index_created": 0.2,
+        "res_analyze_ran": 0.15,
+        "res_fully_resolved": 0.05,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted\nFROM \n    pg_locks\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_locks.objoid = (SELECT oid FROM pg_class WHERE relname = 'bookings');",
+          "output": null,
+          "error": "ERROR: column pg_locks.objoid does not exist\nLINE 13:     pg_locks.objoid = (SELECT oid FROM pg_class WHERE relnam...\n             ^\nHINT:  Perhaps you meant to reference the column \"pg_locks.objid\".",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted,\n    pg_locks.objid\nFROM \n    pg_locks\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_locks.objid = (SELECT oid FROM pg_class WHERE relname = 'bookings');",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    pid,\n    usename,\n    current_query AS query,\n    state,\n    waiting,\n    query_start,\n    (now() - query_start) AS runtime\nFROM \n    pg_stat_activity\nWHERE \n    state != 'idle'\n    AND pid != pg_backend_pid()\nORDER BY \n    (now() - query_start) DESC;",
+          "output": null,
+          "error": "ERROR: column \"current_query\" does not exist\nLINE 4:     current_query AS query,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    pid,\n    usename,\n    query AS query,\n    state,\n    waiting,\n    query_start,\n    (now() - query_start) AS runtime\nFROM \n    pg_stat_activity\nWHERE \n    state != 'idle'\n    AND pid != pg_backend_pid()\nORDER BY \n    (now() - query_start) DESC;",
+          "output": null,
+          "error": "ERROR: column \"waiting\" does not exist\nLINE 6:     waiting,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    pid,\n    usename,\n    query AS query,\n    state,\n    query_start,\n    (now() - query_start) AS runtime\nFROM \n    pg_stat_activity\nWHERE \n    state != 'idle'\n    AND pid != pg_backend_pid()\nORDER BY \n    (now() - query_start) DESC;",
+          "output": "pid | usename | query | state | query_start | runtime\n------+---------+-------+-------+-------------+--------\n269 | postgres | SELECT pg_backend_pid() | idle in transaction | 2026-04-04 02:38:55.181173+00:00 | 0:00:41.623311\n271 | postgres | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | idle in transaction (aborted) | 2026-04-04 02:38:56.185470+00:00 | 0:00:40.619014\n273 | postgres | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = ",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT \n    pg_locks.pid,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted,\n    pg_class.relname,\n    pg_stat_activity.query\nFROM \n    pg_locks\nJOIN \n    pg_class ON pg_locks.objoid = pg_class.oid\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_class.relname = 'bookings'\n    AND pg_locks.locktype IN ('relation', 'tuple')\nORDER BY \n    pg_locks.pid;",
+          "output": null,
+          "error": "ERROR: column pg_locks.objoid does not exist\nLINE 11:     pg_class ON pg_locks.objoid = pg_class.oid\n                         ^\nHINT:  Perhaps you meant to reference the column \"pg_locks.objid\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT \n    pg_locks.pid,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted,\n    pg_class.relname,\n    pg_stat_activity.query,\n    pg_stat_activity.query_start,\n    (now() - pg_stat_activity.query_start) AS runtime\nFROM \n    pg_locks\nJOIN \n    pg_class ON pg_locks.objid = pg_class.oid\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_class.relname = 'bookings'\n    AND pg_locks.locktype IN ('relation', 'tuple')\n    AND NOT pg_locks.granted\nORDER BY \n    (now() - pg_stat_activity.query_start) DESC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    indexname,\n    indexdef \nFROM \n    pg_indexes \nWHERE \n    tablename = 'bookings';",
+          "output": "indexname | indexdef\n----------+---------\nbookings_pkey | CREATE UNIQUE INDEX bookings_pkey ON bookings.bookings USING btree (book_ref)\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "EXPLAIN ANALYZE UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07';",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout\nCONTEXT:  while updating tuple (2838,47) in relation \"bookings\"",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT \n    pg_locks.pid,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted,\n    pg_class.relname,\n    pg_stat_activity.query,\n    pg_stat_activity.query_start,\n    (now() - pg_stat_activity.query_start) AS runtime\nFROM \n    pg_locks\nJOIN \n    pg_class ON pg_locks.objid = pg_class.oid\nJOIN \n    pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid\nWHERE \n    pg_class.relname = 'bookings'\n    AND pg_locks.locktype = 'tuple'\n    AND NOT pg_locks.granted\nORDER BY \n    (now() - pg_stat_activity.query_start) DESC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT \n    pid,\n    usename,\n    query,\n    state,\n    query_start,\n    (now() - query_start) AS runtime\nFROM \n    pg_stat_activity\nWHERE \n    state = 'idle in transaction'\n    AND pid != pg_backend_pid()\nORDER BY \n    runtime DESC;",
+          "output": "pid | usename | query | state | query_start | runtime\n------+---------+-------+-------+-------------+--------\n269 | postgres | SELECT pg_backend_pid() | idle in transaction | 2026-04-04 02:38:55.181173+00:00 | 0:02:29.160409\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT \n    pid,\n    usename,\n    query,\n    state,\n    query_start,\n    (now() - query_start) AS runtime\nFROM \n    pg_stat_activity\nWHERE \n    pid IN (271, 273, 275)\n    AND state = 'idle in transaction'\n    AND pid != pg_backend_pid()\nORDER BY \n    runtime DESC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND pid != pg_backend_pid();",
+          "output": "pg_terminate_backend\n--------------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_14",
+      "task_name": "Deadlock Chain",
+      "difficulty": "hard",
+      "fault_type": "deadlock_chain",
+      "is_resolved": true,
+      "grader_score": 0.69,
+      "steps_used": 14,
+      "elapsed_s": 153.0,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_conflicting_txns": 0.1,
+        "res_no_blocked_txids": 0.2,
+        "res_no_lock_waits": 0.2,
+        "_efficiency_mult": 0.85,
+        "bp_no_destructive": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    l.locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    l.locked_table = 'bookings'::regclass\n    AND l.granted = false;",
+          "output": null,
+          "error": "ERROR: column l.locked_table does not exist\nLINE 2:     l.locked_table,\n            ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT \n    l.lockrel::regclass AS locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    l.lockrel = 'bookings'::regclass\n    AND l.granted = false;",
+          "output": null,
+          "error": "ERROR: column l.lockrel does not exist\nLINE 2:     l.lockrel::regclass AS locked_table,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    c.relname AS locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_class c ON l.lockrel = c.oid\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    c.relname = 'bookings'\n    AND l.granted = false;",
+          "output": null,
+          "error": "ERROR: column l.lockrel does not exist\nLINE 12:     pg_class c ON l.lockrel = c.oid\n                           ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    l.locktable::regclass AS locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    l.locktable = 'bookings'::regclass\n    AND l.granted = false;",
+          "output": null,
+          "error": "ERROR: column l.locktable does not exist\nLINE 2:     l.locktable::regclass AS locked_table,\n            ^\nHINT:  Perhaps you meant to reference the column \"l.locktype\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    l.relation::regclass AS locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_class c ON l.relation = c.oid\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    c.relname = 'bookings'\n    AND l.granted = false;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "<sql>",
+          "output": null,
+          "error": "ERROR: syntax error at or near \"<\"\nLINE 1: <sql>\n        ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT \n    c.relname AS locked_table,\n    l.mode,\n    l.granted,\n    a.pid,\n    a.query,\n    a.state,\n    a.query_start\nFROM \n    pg_locks l\nJOIN \n    pg_class c ON l.relation = c.oid\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    c.relname = 'bookings'\n    AND l.granted = false;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    pid, \n    query, \n    state, \n    query_start, \n    waiting\nFROM \n    pg_stat_activity\nWHERE \n    waiting = true\n    OR state = 'idle in transaction';",
+          "output": null,
+          "error": "ERROR: column \"waiting\" does not exist\nLINE 6:     waiting\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT \n    pid, \n    query, \n    state, \n    query_start, \n    wait_event_type, \n    wait_event\nFROM \n    pg_stat_activity\nWHERE \n    wait_event_type IS NOT NULL\n    OR state = 'idle in transaction';",
+          "output": "pid | query | state | query_start | wait_event_type | wait_event\n------+-------+-------+-------------+-----------------+-----------\n36 |  | NULL | NULL | Activity | AutoVacuumMain\n37 |  | NULL | NULL | Activity | LogicalLauncherMain\n103 | \n            SELECT count(*) as cnt\n            FROM pg_indexes\n            WHERE schemaname = 'bookings' AND tablename = 'ticket_flights'\n         | idle | 2026-04-04 02:43:35.318405+00:00 | Client | ClientRead\n289 | UPDATE bookings.bookings SET total_amount =",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT \n    l.pid,\n    a.query,\n    l.mode,\n    l.granted,\n    l.transactionid\nFROM \n    pg_locks l\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    l.relation = (SELECT oid FROM pg_class WHERE relname = 'bookings')\n    AND l.granted = false;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT \n    l.pid,\n    a.query,\n    c.relname AS locked_table,\n    l.mode,\n    l.granted,\n    l.transactionid\nFROM \n    pg_locks l\nJOIN \n    pg_class c ON l.relation = c.oid\nJOIN \n    pg_stat_activity a ON l.pid = a.pid\nWHERE \n    c.relname = 'bookings'\n    AND l.granted = false;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "CREATE INDEX IF NOT EXISTS idx_bookings_book_ref ON bookings.bookings(book_ref);",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT \n    pid, \n    query, \n    state, \n    wait_event_type, \n    wait_event\nFROM \n    pg_stat_activity\nWHERE \n    wait_event_type = 'Lock'\n    AND state != 'idle';",
+          "output": "pid | query | state | wait_event_type | wait_event\n------+-------+-------+-----------------+-----------\n289 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '363381' | active | Lock | transactionid\n291 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active | Lock | transactionid\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT pg_terminate_backend(pid) FROM (\n    SELECT pid \n    FROM pg_stat_activity \n    WHERE pid IN (289, 291)\n) AS subquery;",
+          "output": "pg_terminate_backend\n--------------------\nTrue\nTrue\n(2 rows)",
+          "error": null,
+          "reward": 0.39499999999999996,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_15",
+      "task_name": "Query Plan Flip",
+      "difficulty": "hard",
+      "fault_type": "query_plan_flip",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 6,
+      "elapsed_s": 60.0,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_conflicting_txns": 0.1,
+        "res_no_blocked_txids": 0.2,
+        "res_no_lock_waits": 0.2,
+        "_efficiency_mult": 0.85,
+        "bp_no_destructive": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 'some_value';",
+          "output": null,
+          "error": "ERROR: invalid input syntax for type integer: \"some_value\"\nLINE 1: ... * FROM bookings.ticket_flights WHERE flight_id = 'some_valu...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'bookings' AND table_name = 'ticket_flights' AND column_name = 'flight_id';",
+          "output": "column_name | data_type\n------------+----------\nflight_id | integer\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'ticket_flights' AND indexname = 'ticket_flights_flight_id_idx';",
+          "output": "indexname | indexdef\n----------+---------\nticket_flights_flight_id_idx | CREATE INDEX ticket_flights_flight_id_idx ON bookings.ticket_flights USING btree (flight_id)\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 12345;",
+          "output": "QUERY PLAN\n----------\nIndex Scan using idx_ticket_flights_flight on ticket_flights  (cost=0.43..9864.11 rows=103 width=32) (actual time=0.080..0.382 rows=22 loops=1)\n  Index Cond: (flight_id = 12345)\nPlanning Time: 0.581 ms\nExecution Time: 0.434 ms\n(4 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_16",
+      "task_name": "Cascading Bloat (Multi-Table)",
+      "difficulty": "hard",
+      "fault_type": "cascading_bloat",
+      "is_resolved": false,
+      "grader_score": null,
+      "steps_used": 7,
+      "elapsed_s": 76.6,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_conflicting_txns": 0.1,
+        "res_no_blocked_txids": 0.2,
+        "res_no_lock_waits": 0.2,
+        "_efficiency_mult": 0.85,
+        "bp_no_destructive": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT relname, n_dead_tup, n_live_tup, last_vacuum, last_autovacuum, vacuumloccount, vacuum_full_count FROM pg_stat_all_tables WHERE relname IN ('bookings.bookings', 'bookings.tickets', 'bookings.ticket_flights', 'bookings.boarding_passes');",
+          "output": null,
+          "error": "ERROR: column \"vacuumloccount\" does not exist\nLINE 1: ...ad_tup, n_live_tup, last_vacuum, last_autovacuum, vacuumlocc...\n                                                             ^\nHINT:  Perhaps you meant to reference the column \"pg_stat_all_tables.vacuum_count\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT relname, n_dead_tup, n_live_tup, last_vacuum, last_autovacuum, vacuum_count, vacuum_full_count FROM pg_stat_all_tables WHERE relname IN ('bookings.bookings', 'bookings.tickets', 'bookings.ticket_flights', 'bookings.boarding_passes');",
+          "output": null,
+          "error": "ERROR: column \"vacuum_full_count\" does not exist\nLINE 1: ..._tup, last_vacuum, last_autovacuum, vacuum_count, vacuum_ful...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT * FROM pg_stat_all_tables WHERE relname IN ('bookings.bookings', 'bookings.tickets', 'bookings.ticket_flights', 'bookings.boarding_passes');",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT relname, n_dead_tup, n_live_tup, last_vacuum, last_autovacuum, vacuum_count FROM pg_stat_all_tables WHERE relname IN ('bookings.bookings', 'bookings.tickets', 'bookings.ticket_flights', 'bookings.boarding_passes');",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT relname, n_dead_tup, n_live_tup, last_vacuum, last_autovacuum, vacuum_count FROM pg_stat_all_tables WHERE relname IN ('bookings.bookings', 'bookings.tickets', 'bookings.ticket_flights', 'bookings.boarding_passes');",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT schemaname, relname, n_dead_tup, n_live_tup, last_vacuum, last_autovacuum, vacuum_count FROM pg_stat_all_tables WHERE schemaname = 'bookings' AND relname IN ('bookings', 'tickets', 'ticket_flights', 'boarding_passes');",
+          "output": "schemaname | relname | n_dead_tup | n_live_tup | last_vacuum | last_autovacuum | vacuum_count\n-----------+---------+------------+------------+-------------+-----------------+-------------\nbookings | boarding_passes | 0 | 0 | NULL | NULL | 0\nbookings | bookings | 60003 | 0 | NULL | NULL | 0\nbookings | ticket_flights | 148223 | 8393442 | 2026-04-04 02:36:40.043487+00:00 | NULL | 1\nbookings | tickets | 50000 | 0 | NULL | NULL | 0\n(4 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "",
+          "error": "ENV: 500 Server Error: Internal Server Error for url: http://localhost:8000/step"
+        }
+      ]
+    },
+    {
+      "task_id": "task_17",
+      "task_name": "Compound: Connection Exhaustion + Deadlock",
+      "difficulty": "hard",
+      "fault_type": "compound_conn_deadlock",
+      "is_resolved": false,
+      "grader_score": 0.6375,
+      "steps_used": 15,
+      "elapsed_s": 164.8,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_idle_problem": 0.1,
+        "res_idle_cleared": 0.15,
+        "res_no_deadlocks": 0.1,
+        "_efficiency_mult": 0.95,
+        "bp_no_destructive": 0.05,
+        "bp_targeted_terminate": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_stat_activity.query_start,\n    pg_locks.locktype,\n    pg_locks.mode,\n    pg_locks.granted\nFROM \n    pg_stat_activity\nJOIN \n    pg_locks ON pg_stat_activity.pid = pg_locks.pid\nWHERE \n    pg_locks.granted = false\n    OR pg_stat_activity.state = 'idle in transaction'\n    OR pg_stat_activity.state = 'active'\nORDER BY \n    pg_stat_activity.query_start;",
+          "output": "pid | query | state | query_start | locktype | mode | granted\n------+-------+-------+-------------+----------+-------+--------\n318 | SELECT 1 | idle in transaction | 2026-04-04 02:47:10.862315+00:00 | virtualxid | ExclusiveLock | True\n319 | SELECT 1 | idle in transaction | 2026-04-04 02:47:10.867630+00:00 | virtualxid | ExclusiveLock | True\n320 | SELECT 1 | idle in transaction | 2026-04-04 02:47:10.873219+00:00 | virtualxid | ExclusiveLock | True\n321 | SELECT 1 | idle in transaction | 2026-04-04",
+          "error": null,
+          "reward": 0.02,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_terminate_backend(318);",
+          "output": "pg_terminate_backend\n--------------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND pid NOT IN (SELECT pid FROM pg_locks WHERE locktype = 'virtualxid' AND mode = 'ExclusiveLock' AND granted = true);",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    pid, \n    locktype, \n    mode, \n    granted, \n    transactionid, \n    database \nFROM \n    pg_locks \nWHERE \n    granted = false \nORDER BY \n    transactionid DESC;",
+          "output": null,
+          "error": "ERROR: could not identify an ordering operator for type xid\nLINE 13:     transactionid DESC;\n             ^\nHINT:  Use an explicit ordering operator or modify the query.",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    pid, \n    locktype, \n    mode, \n    granted, \n    transactionid::bigint AS transactionid, \n    database \nFROM \n    pg_locks \nWHERE \n    granted = false \nORDER BY \n    transactionid DESC;",
+          "output": null,
+          "error": "ERROR: cannot cast type xid to bigint\nLINE 6:     transactionid::bigint AS transactionid, \n                         ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT \n    pid, \n    locktype, \n    mode, \n    granted, \n    transactionid, \n    database \nFROM \n    pg_locks \nWHERE \n    granted = false \nORDER BY \n    transactionid DESC;",
+          "output": null,
+          "error": "ERROR: could not identify an ordering operator for type xid\nLINE 13:     transactionid DESC;\n             ^\nHINT:  Use an explicit ordering operator or modify the query.",
+          "reward": -0.08,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT \n    pid, \n    locktype, \n    mode, \n    granted, \n    transactionid::text AS transactionid, \n    database \nFROM \n    pg_locks \nWHERE \n    granted = false \nORDER BY \n    transactionid DESC;",
+          "output": "pid | locktype | mode | granted | transactionid | database\n------+----------+-------+---------+---------------+---------\n399 | transactionid | ShareLock | False | 953 | NULL\n401 | transactionid | ShareLock | False | 952 | NULL\n(2 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    a.pid, \n    a.query, \n    a.state, \n    a.query_start, \n    l.locktype, \n    l.mode, \n    l.granted, \n    l.transactionid\nFROM \n    pg_stat_activity a\nJOIN \n    pg_locks l ON a.pid = l.pid\nWHERE \n    l.granted = false\n    OR a.state = 'idle in transaction'\nORDER BY \n    l.transactionid DESC;",
+          "output": null,
+          "error": "ERROR: could not identify an ordering operator for type xid\nLINE 18:     l.transactionid DESC;\n             ^\nHINT:  Use an explicit ordering operator or modify the query.",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT \n    a.pid, \n    a.query, \n    a.state, \n    a.query_start, \n    l.locktype, \n    l.mode, \n    l.granted, \n    l.transactionid::text AS transactionid\nFROM \n    pg_stat_activity a\nJOIN \n    pg_locks l ON a.pid = l.pid\nWHERE \n    l.granted = false\n    OR a.state = 'idle in transaction'\nORDER BY \n    l.transactionid::text DESC;",
+          "output": "pid | query | state | query_start | locktype | mode | granted | transactionid\n------+-------+-------+-------------+----------+-------+---------+--------------\n396 | SELECT 1 | idle in transaction | 2026-04-04 02:47:11.344164+00:00 | virtualxid | ExclusiveLock | True | NULL\n394 | SELECT 1 | idle in transaction | 2026-04-04 02:47:11.331531+00:00 | virtualxid | ExclusiveLock | True | NULL\n397 | SELECT 1 | idle in transaction | 2026-04-04 02:47:11.350786+00:00 | virtualxid | ExclusiveLock | True | N",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction';",
+          "output": "pg_terminate_backend\n--------------------\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\n(79 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT \n    pid, \n    locktype, \n    mode, \n    granted, \n    transactionid::text AS transactionid\nFROM \n    pg_locks \nWHERE \n    granted = false \nORDER BY \n    transactionid DESC;",
+          "output": "pid | locktype | mode | granted | transactionid\n------+----------+-------+---------+--------------\n399 | transactionid | ShareLock | False | 953\n401 | transactionid | ShareLock | False | 952\n(2 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_locks WHERE granted = false AND locktype = 'transactionid';",
+          "output": "pg_terminate_backend\n--------------------\nTrue\nTrue\n(2 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT \n    pid, \n    usename, \n    current_query AS query, \n    state, \n    query_start, \n    waiting\nFROM \n    pg_stat_activity\nWHERE \n    state IN ('active', 'idle in transaction')\n    OR waiting = true\nORDER BY \n    query_start;",
+          "output": null,
+          "error": "ERROR: column \"current_query\" does not exist\nLINE 4:     current_query AS query, \n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT \n    pid, \n    usename, \n    query, \n    state, \n    query_start, \n    waiting\nFROM \n    pg_stat_activity\nWHERE \n    state IN ('active', 'idle in transaction')\n    OR waiting = true\nORDER BY \n    query_start;",
+          "output": null,
+          "error": "ERROR: column \"waiting\" does not exist\nLINE 7:     waiting\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT \n    pid, \n    usename, \n    query, \n    state, \n    query_start\nFROM \n    pg_stat_activity\nWHERE \n    state IN ('active', 'idle in transaction')\nORDER BY \n    query_start;",
+          "output": "pid | usename | query | state | query_start\n------+---------+-------+-------+------------\n402 | postgres | SELECT \n    pid, \n    usename, \n    query, \n    state, \n    query_start\nFROM \n    pg_stat_activity\nWHERE \n    state IN ('active', 'idle in transaction')\nORDER BY \n    query_start; | active | 2026-04-04 02:49:55.021885+00:00\n(1 rows)",
+          "error": null,
+          "reward": 0.3187,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    }
+  ]
+}

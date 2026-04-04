@@ -37,6 +37,8 @@ def _load_all_results() -> dict:
     return results
 
 
+_NEW_MODELS = {"gemma4:31b"}  # released within last week
+
 def _model_display_name(model: str) -> str:
     """Shorten model names for display."""
     names = {
@@ -46,6 +48,9 @@ def _model_display_name(model: str) -> str:
         "deepseek-coder-v2:16b": "DeepSeek-Coder-V2 16B",
         "phi4:14b": "Phi-4 14B",
         "qwen3:8b": "Qwen3 8B",
+        "qwen3-coder:30b": "Qwen3-Coder 30B",
+        "codestral:22b": "Codestral 22B",
+        "gemma4:31b": "Gemma 4 31B",
     }
     return names.get(model, model)
 
@@ -1405,6 +1410,7 @@ def _leaderboard_html(all_results: dict) -> str:
         s = data.get("summary", {})
         rows.append({
             "model": _model_display_name(model),
+            "is_new": model in _NEW_MODELS,
             "total": s.get("total_score", 0),
             "avg": s.get("average_score", 0),
             "resolved": s.get("resolved_count", 0),
@@ -1425,7 +1431,7 @@ def _leaderboard_html(all_results: dict) -> str:
         bg = "#fef9c3" if i % 2 else "#fff"
         html += f'''<tr{rank_cls} style="background:{bg}">
             <td style="font-weight:900;text-align:center">{i+1}</td>
-            <td style="text-align:left;font-weight:700">{r["model"]}</td>
+            <td style="text-align:left;font-weight:700">{r["model"]}{"&ensp;🆕" if r["is_new"] else ""}</td>
             <td class="score-cell">{r["total"]:.3f} / {r["tasks"]}</td>
             <td>{r["avg"]:.3f}</td>
             <td>{r["resolved"]} / {r["tasks"]}</td>
@@ -1494,20 +1500,19 @@ def _readme_tab_html() -> str:
         <h2 style="font-size:24px;font-weight:900;margin:0 0 12px 0">
             SQLab: Database Incident Response Training for LLM Agents</h2>
         <p style="font-size:15px;line-height:1.6;margin:0 0 12px 0">
-            SQL databases power nearly every production application &mdash; from booking systems
-            to financial platforms. When they break, the symptoms are cryptic: queries that ran in
-            milliseconds now take seconds, connections pile up until the pool is exhausted, transactions
-            deadlock each other, and bloated tables silently degrade performance. Diagnosing these
-            failures requires reading execution plans, inspecting lock graphs, and understanding how
-            the query planner makes decisions &mdash; skills that take years to develop.</p>
+            SQL databases are the backbone of most production software, from booking systems to
+            financial platforms. When something goes wrong, the symptoms can be confusing: queries
+            that used to be instant now take seconds, the database runs out of available connections,
+            transactions block each other, and tables quietly grow bloated and slow. Fixing these
+            problems requires a specific set of investigative skills that take years to build up.</p>
         <p style="font-size:15px;line-height:1.6;margin:0 0 16px 0">
             SQLab is an OpenEnv environment where LLM agents learn these skills. It presents
-            <b>17 production-realistic PostgreSQL faults</b> &mdash; missing indexes, stale statistics,
-            deadlock chains, cascading bloat, misconfigured parameters, and more &mdash; against a live
+            <b>17 production-realistic database faults</b> (missing indexes, outdated statistics,
+            deadlocks, storage bloat, misconfigured settings, and more) against a live PostgreSQL
             database with 20 million rows of airline booking data. The agent receives an alert, has
-            15 steps to investigate and fix the issue using raw SQL, and is scored by a deterministic
-            grader on diagnosis, resolution, and best practices (0&ndash;1 scale, fully reproducible,
-            no LLM judge).</p>
+            15 steps to investigate and fix the issue using raw SQL commands, and is scored by a
+            deterministic grader on diagnosis, resolution, and best practices (0 to 1 scale, fully
+            reproducible, no LLM judge).</p>
         <p style="font-size:14px;font-weight:600;margin:0">
             Try it in the <b>Playground</b> tab, or read on for details.</p>
     '''))
@@ -1652,8 +1657,8 @@ def _readme_tab_html() -> str:
     blocks.append(_block("#fecdd3", '''
         <h3 style="font-size:20px;font-weight:900;margin:0 0 14px 0">Baseline Results</h3>
         <p style="font-size:15px;line-height:1.7;margin:0 0 14px 0">
-            Five open-source models tested against all 17 tasks with anti-hack reward shaping.
-            Average scores range from 0.42 to 0.64. Full per-task breakdown in the <b>Leaderboard</b> tab.</p>
+            Nine open-source models tested against all 17 tasks with anti-hack reward shaping.
+            Average scores range from 0.39 to 0.77. Full per-task breakdown in the <b>Leaderboard</b> tab.</p>
         <table style="width:auto;margin:0 auto;border-collapse:collapse;font-size:12px;font-weight:600">
             <tr style="background:#fff;border:2px solid #000">
                 <th style="padding:5px 10px;text-align:left;border:1px solid #000">Model</th>
@@ -1661,9 +1666,24 @@ def _readme_tab_html() -> str:
                 <th style="padding:5px 10px;text-align:center;border:1px solid #000">Resolved</th>
             </tr>
             <tr style="border:1px solid #000">
+                <td style="padding:5px 10px;border:1px solid #000">Gemma 4 31B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.774</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">12 / 17</td>
+            </tr>
+            <tr style="border:1px solid #000">
+                <td style="padding:5px 10px;border:1px solid #000">Qwen3-Coder 30B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.669</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">7 / 17</td>
+            </tr>
+            <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Phi-4 14B</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.638</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">10 / 17</td>
+            </tr>
+            <tr style="border:1px solid #000">
+                <td style="padding:5px 10px;border:1px solid #000">Devstral 15B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.609</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">6 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 14B</td>
@@ -1671,9 +1691,9 @@ def _readme_tab_html() -> str:
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">7 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
-                <td style="padding:5px 10px;border:1px solid #000">Devstral 15B</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.609</td>
-                <td style="padding:5px 10px;text-align:center;border:1px solid #000">6 / 17</td>
+                <td style="padding:5px 10px;border:1px solid #000">Codestral 22B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.577</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">7 / 17</td>
             </tr>
             <tr style="border:1px solid #000">
                 <td style="padding:5px 10px;border:1px solid #000">Qwen2.5-Coder 7B</td>
@@ -1684,6 +1704,11 @@ def _readme_tab_html() -> str:
                 <td style="padding:5px 10px;border:1px solid #000">DeepSeek-Coder-V2 16B</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.417</td>
                 <td style="padding:5px 10px;text-align:center;border:1px solid #000">3 / 17</td>
+            </tr>
+            <tr style="border:1px solid #000">
+                <td style="padding:5px 10px;border:1px solid #000">Qwen3 8B</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">0.390</td>
+                <td style="padding:5px 10px;text-align:center;border:1px solid #000">6 / 17</td>
             </tr>
         </table>
     '''))
@@ -2223,6 +2248,20 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
             gr.HTML('<h2 style="margin-top:24px">Score Heatmap</h2>')
             gr.HTML('<p style="color:#000;font-size:13px;font-weight:600;margin-bottom:12px">Scores by model × task. Green = high, red = low.</p>')
             gr.HTML(_heatmap_html(all_results))
+
+            gr.HTML('''<h2 style="margin-top:24px">SQL-Specialist Models</h2>
+<p style="color:#000;font-size:13px;font-weight:600;margin-bottom:12px">
+Domain-specific text-to-SQL fine-tunes tested on SQLab. These models excel at single-shot query generation
+but complete only one or two tasks in SQLab's multi-turn workflows, highlighting the gap this environment is designed to fill.</p>''')
+            gr.HTML('''<div style="overflow-x:auto"><table class="leaderboard-table" style="margin-bottom:24px">
+<thead><tr>
+    <th>Model</th><th>Total Score</th><th>Average</th><th>Resolved</th>
+</tr></thead><tbody>
+<tr style="background:#fff"><td>DuckDB-NSQL 7B</td><td>2.703 / 17</td><td>0.159</td><td>0 / 17</td></tr>
+<tr style="background:#fef9c3"><td>Defog Llama3-SQLCoder 8B</td><td>2.503 / 17</td><td>0.147</td><td>2 / 17</td></tr>
+<tr style="background:#fff"><td>SQLCoder 15B</td><td>2.054 / 17</td><td>0.121</td><td>1 / 17</td></tr>
+<tr style="background:#fef9c3"><td>SQLCoder 7B</td><td>0.000 / 17</td><td>0.000</td><td>0 / 17</td></tr>
+</tbody></table></div>''')
 
             # Environment overview
             gr.HTML(f'''<div class="env-overview" style="margin-top:24px">

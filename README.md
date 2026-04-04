@@ -124,17 +124,34 @@ Validated by **255 adversarial unit tests** (`test_reward_hacking.py`) covering 
 
 ## Baseline Results
 
-Five open-source models tested against all 17 tasks with anti-hack reward shaping (v5):
+Nine open-source coding models tested against all 17 tasks with anti-hack reward shaping (v5). These are general-purpose coding models, not SQL specialists. "Total" is the sum of per-task scores (each 0 to 1). "Resolved" means the grader confirmed the fault was fully fixed.
 
 | Model | Total | Average | Resolved |
 |-------|-------|---------|----------|
+| Gemma 4 31B | 13.150 / 17 | 0.774 | 12 / 17 |
+| Qwen3-Coder 30B | 11.377 / 17 | 0.669 | 7 / 17 |
 | Phi-4 14B | 10.847 / 17 | 0.638 | 10 / 17 |
 | Devstral 15B | 10.349 / 17 | 0.609 | 6 / 17 |
 | Qwen2.5-Coder 14B | 10.131 / 17 | 0.596 | 7 / 17 |
+| Codestral 22B | 9.807 / 17 | 0.577 | 7 / 17 |
 | Qwen2.5-Coder 7B | 7.568 / 17 | 0.445 | 1 / 17 |
 | DeepSeek-Coder-V2 16B | 7.082 / 17 | 0.417 | 3 / 17 |
+| Qwen3 8B | 6.633 / 17 | 0.390 | 6 / 17 |
 
-Scores range from 0.42 to 0.64 average, making SQLab hard enough to challenge frontier models but solvable enough to provide learning signal.
+Scores range from 0.39 to 0.77 average, making SQLab hard enough to challenge frontier models but solvable enough to provide learning signal.
+
+### SQL-Specialist Models
+
+Domain-specific text-to-SQL fine-tunes tested on all 17 tasks:
+
+| Model | Total | Average | Resolved |
+|-------|-------|---------|----------|
+| DuckDB-NSQL 7B | 2.703 / 17 | 0.159 | 0 / 17 |
+| Defog Llama3-SQLCoder 8B | 2.503 / 17 | 0.147 | 2 / 17 |
+| SQLCoder 15B | 2.054 / 17 | 0.121 | 1 / 17 |
+| SQLCoder 7B | 0.000 / 17 | 0.000 | 0 / 17 |
+
+SQL-specialist models complete only one or two tasks. They are designed for single-shot text-to-SQL generation and cannot handle multi-turn agentic diagnosis workflows, highlighting the gap SQLab is designed to fill.
 
 ## Architecture
 

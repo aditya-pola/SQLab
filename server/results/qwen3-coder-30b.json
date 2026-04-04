@@ -1,0 +1,2260 @@
+{
+  "model": "qwen3-coder:30b",
+  "timestamp": "2026-04-04T19:38:42.627645",
+  "summary": {
+    "total_tasks": 17,
+    "total_score": 11.3769,
+    "average_score": 0.6692,
+    "resolved_count": 7
+  },
+  "results": [
+    {
+      "task_id": "task_1",
+      "task_name": "Missing Index",
+      "difficulty": "easy",
+      "fault_type": "missing_index",
+      "is_resolved": false,
+      "grader_score": 0.6,
+      "steps_used": 15,
+      "elapsed_s": 48.9,
+      "grader_breakdown": {
+        "inv_explain": 0.1,
+        "inv_checked_indexes": 0.1,
+        "id_target_table": 0.1,
+        "id_target_column": 0.1,
+        "_efficiency_mult": 0.7,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_concurrently": 0.05,
+        "bp_analyzed_after": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = '0005432123456'",
+          "output": "QUERY PLAN\n----------\nNested Loop  (cost=0.98..41.87 rows=3 width=95) (actual time=0.181..0.184 rows=1 loops=1)\n  ->  Index Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..16.56 rows=3 width=32) (actual time=0.127..0.128 rows=1 loops=1)\n        Index Cond: (ticket_no = '0005432123456'::bpchar)\n  ->  Index Scan using flights_pkey on flights f  (cost=0.42..8.44 rows=1 width=63) (actual time=0.046..0.047 rows=1 loops=1)\n        Index Cond: (flight_id = tf.flight_id)\nPlanning Time: ",
+          "error": null,
+          "reward": 0.02,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT count(*) FROM bookings.ticket_flights WHERE ticket_no = '0005432123456'",
+          "output": "count\n-----\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT * FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = '0005432123456' LIMIT 10",
+          "output": "ticket_no | flight_id | fare_conditions | amount | flight_id | flight_no | scheduled_departure | scheduled_arrival | departure_airport | arrival_airport | status | aircraft_code | actual_departure | actual_arrival\n----------+-----------+-----------------+--------+-----------+-----------+---------------------+-------------------+-------------------+-----------------+--------+---------------+------------------+---------------\n0005432123456 | 35317 | Economy | 9800.00 | 35317 | PG0317 | 2016-11-11 ",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, f.flight_no, f.scheduled_departure, f.scheduled_arrival, f.departure_airport, f.arrival_airport FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = '0005432123456' ORDER BY f.scheduled_departure",
+          "output": "QUERY PLAN\n----------\nSort  (cost=33.95..33.96 rows=3 width=49) (actual time=0.112..0.114 rows=1 loops=1)\n  Sort Key: f.scheduled_departure\n  Sort Method: quicksort  Memory: 25kB\n  ->  Nested Loop  (cost=0.98..33.93 rows=3 width=49) (actual time=0.072..0.074 rows=1 loops=1)\n        ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..8.61 rows=3 width=18) (actual time=0.040..0.042 rows=1 loops=1)\n              Index Cond: (ticket_no = '0005432123456'::bpchar)\n         ",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT count(*) FROM bookings.ticket_flights",
+          "output": "count\n-----\n8391852\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT count(*) FROM bookings.flights",
+          "output": "count\n-----\n214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, f.flight_no, f.scheduled_departure, f.scheduled_arrival, f.departure_airport, f.arrival_airport FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no IN ('0005432123456', '0005432123457', '0005432123458') ORDER BY f.scheduled_departure",
+          "output": "QUERY PLAN\n----------\nSort  (cost=102.39..102.41 rows=10 width=49) (actual time=0.150..0.153 rows=3 loops=1)\n  Sort Key: f.scheduled_departure\n  Sort Method: quicksort  Memory: 25kB\n  ->  Nested Loop  (cost=0.98..102.22 rows=10 width=49) (actual time=0.079..0.139 rows=3 loops=1)\n        ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..17.85 rows=10 width=18) (actual time=0.063..0.110 rows=3 loops=1)\n              Index Cond: (ticket_no = ANY ('{0005432123456,000543",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS ticket_flights_size, pg_size_pretty(pg_total_relation_size('bookings.flights')) AS flights_size",
+          "output": "ticket_flights_size | flights_size\n--------------------+-------------\n872 MB | 32 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname IN ('ticket_flights', 'flights')",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nflights | 214867 | 0 | 0 | 214867 | 0\nticket_flights | 8391852 | 0 | 0 | 8392150 | 0\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS ticket_flights_indexes_size, pg_size_pretty(pg_indexes_size('bookings.flights')) AS flights_indexes_size",
+          "output": "ticket_flights_indexes_size | flights_indexes_size\n----------------------------+---------------------\n325 MB | 11 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings'",
+          "output": "indexname | indexdef\n----------+---------\nticket_flights_pkey | CREATE UNIQUE INDEX ticket_flights_pkey ON bookings.ticket_flights USING btree (ticket_no, flight_id)\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'flights' AND schemaname = 'bookings'",
+          "output": "indexname | indexdef\n----------+---------\nflights_flight_no_scheduled_departure_key | CREATE UNIQUE INDEX flights_flight_no_scheduled_departure_key ON bookings.flights USING btree (flight_no, scheduled_departure)\nflights_pkey | CREATE UNIQUE INDEX flights_pkey ON bookings.flights USING btree (flight_id)\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, f.flight_no, f.scheduled_departure, f.scheduled_arrival, f.departure_airport, f.arrival_airport FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = '0005432123456' ORDER BY f.scheduled_departure",
+          "output": "QUERY PLAN\n----------\nSort  (cost=42.42..42.43 rows=4 width=49) (actual time=0.093..0.095 rows=1 loops=1)\n  Sort Key: f.scheduled_departure\n  Sort Method: quicksort  Memory: 25kB\n  ->  Nested Loop  (cost=0.98..42.38 rows=4 width=49) (actual time=0.081..0.084 rows=1 loops=1)\n        ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..8.63 rows=4 width=18) (actual time=0.064..0.065 rows=1 loops=1)\n              Index Cond: (ticket_no = '0005432123456'::bpchar)\n         ",
+          "error": null,
+          "reward": -0.06,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "CREATE INDEX CONCURRENTLY idx_ticket_flights_ticket_no_flight_id ON bookings.ticket_flights (ticket_no, flight_id);",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": 0.25,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_2",
+      "task_name": "Stale Statistics",
+      "difficulty": "easy",
+      "fault_type": "stale_statistics",
+      "is_resolved": true,
+      "grader_score": 0.87,
+      "steps_used": 13,
+      "elapsed_s": 19.1,
+      "grader_breakdown": {
+        "inv_explain": 0.1,
+        "inv_checked_stats": 0.1,
+        "id_target_table": 0.1,
+        "id_stale_stats": 0.1,
+        "res_analyze_ran": 0.25,
+        "res_estimates_accurate": 0.15,
+        "_efficiency_mult": 0.8,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_targeted_analyze": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'flights';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nflights | 0 | 0 | 0 | 0 | 0\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT COUNT(*) FROM bookings.flights;",
+          "output": "count\n-----\n214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.flights')) AS total_size, pg_size_pretty(pg_table_size('bookings.flights')) AS table_size;",
+          "output": "total_size | table_size\n-----------+-----------\n48 MB | 30 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT * FROM pg_stat_user_tables WHERE relname = 'flights' AND schemaname = 'bookings';",
+          "output": "relid | schemaname | relname | seq_scan | last_seq_scan | seq_tup_read | idx_scan | last_idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_tup_newpage_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum | last_analyze | last_autoanalyze | vacuum_count | autovacuum_count | analyze_count | autoanalyze_count\n------+------------+---------+----------+---------------+--------------+----------+---------------+----------",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.flights WHERE flight_no = 'PG123';",
+          "output": "QUERY PLAN\n----------\nBitmap Heap Scan on flights  (cost=40.67..3013.41 rows=1580 width=170) (actual time=0.044..0.045 rows=0 loops=1)\n  Recheck Cond: (flight_no = 'PG123'::bpchar)\n  ->  Bitmap Index Scan on flights_flight_no_scheduled_departure_key  (cost=0.00..40.27 rows=1580 width=0) (actual time=0.041..0.041 rows=0 loops=1)\n        Index Cond: (flight_no = 'PG123'::bpchar)\nPlanning Time: 0.241 ms\nExecution Time: 0.074 ms\n(6 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT * FROM pg_indexes WHERE tablename = 'flights' AND schemaname = 'bookings';",
+          "output": "schemaname | tablename | indexname | tablespace | indexdef\n-----------+-----------+-----------+------------+---------\nbookings | flights | flights_flight_no_scheduled_departure_key | NULL | CREATE UNIQUE INDEX flights_flight_no_scheduled_departure_key ON bookings.flights USING btree (flight_no, scheduled_departure)\nbookings | flights | flights_pkey | NULL | CREATE UNIQUE INDEX flights_pkey ON bookings.flights USING btree (flight_id)\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT pg_stat_get_live_tuples('bookings.flights'::regclass) AS live_tuples, pg_stat_get_dead_tuples('bookings.flights'::regclass) AS dead_tuples;",
+          "output": "live_tuples | dead_tuples\n------------+------------\n0 | 0\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'flights' AND schemaname = 'bookings';",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16413 | 16463 | bookings | flights | flights_flight_no_scheduled_departure_key | 1 | 2026-04-04 14:00:55.983580+00:00 | 0 | 0\n16413 | 16465 | bookings | flights | flights_pkey | 21 | 2026-04-04 14:00:50.441320+00:00 | 21 | 14\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT pg_stat_get_numscans('bookings.flights'::regclass) AS seq_scans, pg_stat_get_tuples_returned('bookings.flights'::regclass) AS tuples_returned;",
+          "output": "seq_scans | tuples_returned\n----------+----------------\n3 | 214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT * FROM pg_stat_statements WHERE query LIKE '%flights%' ORDER BY calls DESC LIMIT 5;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_statements\" does not exist\nLINE 1: SELECT * FROM pg_stat_statements WHERE query LIKE '%flights%...\n                      ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT relname, last_vacuum, last_autovacuum, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'flights';",
+          "output": "relname | last_vacuum | last_autovacuum | n_live_tup | n_dead_tup\n--------+-------------+-----------------+------------+-----------\nflights | NULL | NULL | 0 | 0\n(1 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT pg_relation_size('bookings.flights') AS table_size, pg_indexes_size('bookings.flights') AS indexes_size;",
+          "output": "table_size | indexes_size\n-----------+-------------\n31612928 | 18309120\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "VACUUM ANALYZE bookings.flights;",
+          "output": "VACUUM",
+          "error": null,
+          "reward": 0.455,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_3",
+      "task_name": "Connection Exhaustion",
+      "difficulty": "easy",
+      "fault_type": "connection_exhaustion",
+      "is_resolved": false,
+      "grader_score": 0.4,
+      "steps_used": 15,
+      "elapsed_s": 13.7,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_max_conn": 0.1,
+        "id_idle_sessions": 0.1,
+        "_efficiency_mult": 0.75,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT count(*) as current_connections FROM pg_stat_activity WHERE state = 'active';",
+          "output": "current_connections\n-------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SHOW max_connections;",
+          "output": "max_connections\n---------------\n100\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT count(*) as total_connections FROM pg_stat_activity;",
+          "output": "total_connections\n-----------------\n89\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT count(*) as idle_connections FROM pg_stat_activity WHERE state = 'idle';",
+          "output": "idle_connections\n----------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT datname, count(*) as connection_count FROM pg_stat_activity GROUP BY datname ORDER BY connection_count DESC;",
+          "output": "datname | connection_count\n--------+-----------------\ndemo | 84\nNULL | 5\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT state, count(*) as connection_count FROM pg_stat_activity GROUP BY state;",
+          "output": "state | connection_count\n------+-----------------\nNULL | 5\nactive | 1\nidle in transaction | 82\nidle | 1\n(4 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT pid, state, query, backend_start, query_start FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY backend_start ASC LIMIT 5;",
+          "output": "pid | state | query | backend_start | query_start\n------+-------+-------+---------------+------------\n120 | idle in transaction | SELECT 1 | 2026-04-04 14:01:04.642629+00:00 | 2026-04-04 14:01:04.646687+00:00\n121 | idle in transaction | SELECT 1 | 2026-04-04 14:01:04.648529+00:00 | 2026-04-04 14:01:04.652159+00:00\n122 | idle in transaction | SELECT 1 | 2026-04-04 14:01:04.653990+00:00 | 2026-04-04 14:01:04.657613+00:00\n123 | idle in transaction | SELECT 1 | 2026-04-04 14:01:04.659420+00:00 | 202",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT pid, state, query, backend_start, query_start FROM pg_stat_activity WHERE state = 'idle in transaction' AND now() - backend_start > interval '5 minutes' ORDER BY backend_start ASC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT pid, state, query, backend_start, query_start FROM pg_stat_activity WHERE state = 'idle in transaction' AND now() - query_start > interval '5 minutes' ORDER BY query_start ASC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT count(*) as long_running_transactions FROM pg_stat_activity WHERE state = 'idle in transaction' AND now() - query_start > interval '1 minute';",
+          "output": "long_running_transactions\n-------------------------\n0\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT count(*) as total_idle_connections FROM pg_stat_activity WHERE state = 'idle';",
+          "output": "total_idle_connections\n----------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT count(*) as total_active_connections FROM pg_stat_activity WHERE state = 'active';",
+          "output": "total_active_connections\n------------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT count(*) as connections_from_app FROM pg_stat_activity WHERE datname = 'demo' AND state IS NOT NULL;",
+          "output": "connections_from_app\n--------------------\n84\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT count(*) as connections_from_app_idle FROM pg_stat_activity WHERE datname = 'demo' AND state = 'idle';",
+          "output": "connections_from_app_idle\n-------------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT count(*) as connections_from_app_idle_in_transaction FROM pg_stat_activity WHERE datname = 'demo' AND state = 'idle in transaction';",
+          "output": "connections_from_app_idle_in_transaction\n----------------------------------------\n82\n(1 rows)",
+          "error": null,
+          "reward": 0.2,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_4",
+      "task_name": "Permission / Role Error",
+      "difficulty": "easy",
+      "fault_type": "permission_error",
+      "is_resolved": true,
+      "grader_score": 0.91,
+      "steps_used": 10,
+      "elapsed_s": 16.8,
+      "grader_breakdown": {
+        "inv_checked_grants": 0.1,
+        "inv_checked_role": 0.1,
+        "id_target_table": 0.1,
+        "id_target_role": 0.1,
+        "res_permission_granted": 0.4,
+        "_efficiency_mult": 0.9,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_minimal_grants": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT pg_get_userbyid(relowner) AS owner, relname, relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE relname = 'ticket_flights' AND n.nspname = 'bookings';",
+          "output": "owner | relname | relkind\n------+---------+--------\npostgres | ticket_flights | r\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT * FROM pg_roles WHERE rolname = 'app_user';",
+          "output": "rolname | rolsuper | rolinherit | rolcreaterole | rolcreatedb | rolcanlogin | rolreplication | rolconnlimit | rolpassword | rolvaliduntil | rolbypassrls | rolconfig | oid\n--------+----------+------------+---------------+-------------+-------------+----------------+--------------+-------------+---------------+--------------+-----------+------\napp_user | False | True | False | False | True | False | -1 | ******** | NULL | False | NULL | 16517\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    r.rolname AS role_name,\n    c.relname AS table_name,\n    n.nspname AS schema_name,\n    CASE WHEN pg_has_role(r.oid, c.oid, 'SELECT') THEN 'SELECT' ELSE 'NO SELECT' END AS privilege\nFROM pg_roles r\nJOIN pg_class c ON c.relowner = r.oid\nJOIN pg_namespace n ON n.oid = c.relnamespace\nWHERE r.rolname = 'app_user' \nAND c.relname = 'ticket_flights'\nAND n.nspname = 'bookings';",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    r.rolname AS role_name,\n    n.nspname AS schema_name,\n    c.relname AS table_name,\n    array_agg(privilege_type) AS privileges\nFROM pg_roles r\nJOIN pg_namespace n ON n.nspname = 'bookings'\nJOIN pg_class c ON c.relnamespace = n.oid\nLEFT JOIN (\n    SELECT \n        grantee,\n        table_schema,\n        table_name,\n        privilege_type\n    FROM information_schema.role_table_grants\n    WHERE table_schema = 'bookings'\n    AND table_name = 'ticket_flights'\n) grants ON grants.grantee = r.rolname\nWHERE r.rolname = 'app_user'\nAND c.relname = 'ticket_flights'\nGROUP BY r.rolname, n.nspname, c.relname;",
+          "output": "role_name | schema_name | table_name | privileges\n----------+-------------+------------+-----------\napp_user | bookings | ticket_flights | {NULL}\n(1 rows)",
+          "error": null,
+          "reward": 0.1,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    r.rolname AS role_name,\n    n.nspname AS schema_name,\n    c.relname AS table_name,\n    CASE WHEN has_table_privilege(r.oid, c.oid, 'SELECT') THEN 'SELECT' ELSE 'NO SELECT' END AS has_select_privilege\nFROM pg_roles r\nJOIN pg_class c ON c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'bookings')\nWHERE r.rolname = 'app_user'\nAND c.relname = 'ticket_flights';",
+          "output": null,
+          "error": "ERROR: missing FROM-clause entry for table \"n\"\nLINE 3:     n.nspname AS schema_name,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT \n    r.rolname AS role_name,\n    n.nspname AS schema_name,\n    c.relname AS table_name,\n    CASE WHEN has_table_privilege(r.oid, c.oid, 'SELECT') THEN 'SELECT' ELSE 'NO SELECT' END AS has_select_privilege\nFROM pg_roles r\nJOIN pg_namespace n ON n.oid = c.relnamespace\nJOIN pg_class c ON c.relnamespace = n.oid\nWHERE r.rolname = 'app_user'\nAND c.relname = 'ticket_flights'\nAND n.nspname = 'bookings';",
+          "output": null,
+          "error": "ERROR: missing FROM-clause entry for table \"c\"\nLINE 7: JOIN pg_namespace n ON n.oid = c.relnamespace\n                                       ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT \n    r.rolname AS role_name,\n    n.nspname AS schema_name,\n    c.relname AS table_name,\n    CASE WHEN has_table_privilege(r.oid, c.oid, 'SELECT') THEN 'SELECT' ELSE 'NO SELECT' END AS has_select_privilege\nFROM pg_roles r\nJOIN pg_class c ON c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'bookings')\nJOIN pg_namespace n ON n.oid = c.relnamespace\nWHERE r.rolname = 'app_user'\nAND c.relname = 'ticket_flights';",
+          "output": "role_name | schema_name | table_name | has_select_privilege\n----------+-------------+------------+---------------------\napp_user | bookings | ticket_flights | NO SELECT\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    n.nspname AS schema_name,\n    c.relname AS table_name,\n    pg_get_userbyid(c.relowner) AS owner,\n    has_table_privilege('app_user', c.oid, 'SELECT') AS has_select_privilege\nFROM pg_class c\nJOIN pg_namespace n ON n.oid = c.relnamespace\nWHERE c.relname = 'ticket_flights'\nAND n.nspname = 'bookings';",
+          "output": "schema_name | table_name | owner | has_select_privilege\n------------+------------+-------+---------------------\nbookings | ticket_flights | postgres | False\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT \n    r.rolname,\n    n.nspname,\n    c.relname,\n    CASE WHEN has_table_privilege(r.oid, c.oid, 'SELECT') THEN 'SELECT' ELSE 'NO SELECT' END AS has_select_privilege\nFROM pg_roles r\nJOIN pg_class c ON c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'bookings')\nJOIN pg_namespace n ON n.oid = c.relnamespace\nWHERE r.rolname = 'app_user'\nAND c.relname = 'ticket_flights';",
+          "output": "rolname | nspname | relname | has_select_privilege\n--------+---------+---------+---------------------\napp_user | bookings | ticket_flights | NO SELECT\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "GRANT SELECT ON TABLE bookings.ticket_flights TO app_user;",
+          "output": "GRANT",
+          "error": null,
+          "reward": 0.455,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_5",
+      "task_name": "Sequence Exhaustion / PK Conflict",
+      "difficulty": "easy",
+      "fault_type": "sequence_exhaustion",
+      "is_resolved": true,
+      "grader_score": 1.0,
+      "steps_used": 4,
+      "elapsed_s": 2.9,
+      "grader_breakdown": {
+        "inv_checked_sequence": 0.1,
+        "inv_checked_max_pk": 0.1,
+        "id_sequence_name": 0.1,
+        "id_mismatch": 0.1,
+        "res_sequence_reset": 0.25,
+        "res_insert_succeeds": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_used_setval": 0.05,
+        "bp_correct_value": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT last_value, is_called FROM bookings.flights_flight_id_seq;",
+          "output": "last_value | is_called\n-----------+----------\n1 | False\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT COUNT(*) FROM bookings.flights;",
+          "output": "count\n-----\n214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT MAX(flight_id) FROM bookings.flights;",
+          "output": "max\n-----\n214867\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT setval('bookings.flights_flight_id_seq', (SELECT MAX(flight_id) FROM bookings.flights), true);",
+          "output": "setval\n------\n214867\n(1 rows)",
+          "error": null,
+          "reward": 0.6,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_6",
+      "task_name": "Bad Configuration",
+      "difficulty": "medium",
+      "fault_type": "bad_config",
+      "is_resolved": false,
+      "grader_score": 0.15,
+      "steps_used": 15,
+      "elapsed_s": 22.2,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "_efficiency_mult": 0.75,
+        "bp_no_destructive": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    pg_size_pretty(pg_database_size('demo')) as database_size,\n    COUNT(*) as active_connections,\n    pg_backend_pid() as current_pid\nFROM pg_stat_activity \nWHERE state = 'active'",
+          "output": "database_size | active_connections | current_pid\n--------------+--------------------+------------\n2713 MB | 1 | 208\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT \n    tmpfile,\n    pg_size_pretty(pg_total_relation_size(tmpfile)) as size,\n    pg_stat_file(tmpfile, true) as file_stats\nFROM pg_temp_files \nORDER BY pg_stat_file(tmpfile, true) DESC\nLIMIT 5",
+          "output": null,
+          "error": "ERROR: relation \"pg_temp_files\" does not exist\nLINE 5: FROM pg_temp_files \n             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    datname,\n    pg_size_pretty(pg_database_size(datname)) as size\nFROM pg_database \nWHERE datname = 'demo'",
+          "output": "datname | size\n--------+------\ndemo | 2713 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    query,\n    calls,\n    total_time,\n    mean_time,\n    temp_blks_written,\n    temp_blks_read\nFROM pg_stat_statements \nWHERE temp_blks_written > 0\nORDER BY temp_blks_written DESC\nLIMIT 5",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_statements\" does not exist\nLINE 8: FROM pg_stat_statements \n             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    psa.query,\n    psa.calls,\n    psa.total_time,\n    psa.mean_time,\n    psa.temp_blks_written,\n    psa.temp_blks_read\nFROM pg_stat_activity psa\nWHERE psa.state = 'active'\nAND psa.query NOT LIKE '%pg_stat%'\nAND psa.query NOT LIKE '%SELECT%'\nORDER BY psa.temp_blks_written DESC\nLIMIT 5",
+          "output": null,
+          "error": "ERROR: column psa.calls does not exist\nLINE 3:     psa.calls,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT \n    query,\n    temp_blks_written,\n    temp_blks_read,\n    pg_size_pretty(temp_blks_written * 8192) as temp_written_size\nFROM pg_stat_activity \nWHERE temp_blks_written > 0\nORDER BY temp_blks_written DESC\nLIMIT 5",
+          "output": null,
+          "error": "ERROR: column \"temp_blks_written\" does not exist\nLINE 3:     temp_blks_written,\n            ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT \n    query,\n    pg_size_pretty(pg_backend_pid()) as backend_pid,\n    state,\n    wait_event_type,\n    wait_event\nFROM pg_stat_activity \nWHERE state = 'active'\nAND query NOT LIKE '%pg_stat%'\nORDER BY backend_pid",
+          "output": null,
+          "error": "ERROR: function pg_size_pretty(integer) is not unique\nLINE 3:     pg_size_pretty(pg_backend_pid()) as backend_pid,\n            ^\nHINT:  Could not choose a best candidate function. You might need to add explicit type casts.",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    query,\n    state,\n    wait_event_type,\n    wait_event\nFROM pg_stat_activity \nWHERE state = 'active'\nAND query NOT LIKE '%pg_stat%'\nORDER BY pg_backend_pid()",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT \n    pid,\n    query,\n    state,\n    wait_event_type,\n    wait_event,\n    query_start,\n    backend_start\nFROM pg_stat_activity \nWHERE state = 'active'\nAND query NOT LIKE '%pg_stat%'\nORDER BY query_start",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT \n    pg_stat_file('base/16384/16385', true) as file_stats",
+          "output": "file_stats\n----------\nNULL\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT \n    schemaname,\n    tablename,\n    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size\nFROM pg_tables \nWHERE schemaname = 'bookings'\nORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC\nLIMIT 5",
+          "output": "schemaname | tablename | size\n-----------+-----------+------\nbookings | boarding_passes | 1102 MB\nbookings | ticket_flights | 930 MB\nbookings | tickets | 475 MB\nbookings | bookings | 151 MB\nbookings | flights | 48 MB\n(5 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) \nSELECT \n    b.book_ref,\n    b.book_date,\n    t.ticket_no,\n    tf.flight_id,\n    bp.boarding_no\nFROM bookings b\nJOIN tickets t ON b.book_ref = t.book_ref\nJOIN ticket_flights tf ON t.ticket_no = tf.ticket_no\nJOIN boarding_passes bp ON tf.flight_id = bp.flight_id AND t.ticket_no = bp.ticket_no\nWHERE b.book_date >= '2023-01-01'\nAND b.book_date < '2024-01-01'\nLIMIT 100",
+          "output": "QUERY PLAN\n----------\n[{'Plan': {'Node Type': 'Limit', 'Parallel Aware': False, 'Async Capable': False, 'Startup Cost': 27683.57, 'Total Cost': 92651.74, 'Plan Rows': 3, 'Plan Width': 37, 'Actual Startup Time': 87.491, 'Actual Total Time': 89.717, 'Actual Rows': 0, 'Actual Loops': 1, 'Shared Hit Blocks': 96, 'Shared Read Blocks': 13488, 'Shared Dirtied Blocks': 0, 'Shared Written Blocks': 0, 'Local Hit Blocks': 0, 'Local Read Blocks': 0, 'Local Dirtied Blocks': 0, 'Local Written Blocks': 0, 'Tem",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT \n    relname,\n    n_tup_ins,\n    n_tup_upd,\n    n_tup_del,\n    n_tup_hot_upd,\n    n_live_tup,\n    n_dead_tup,\n    last_vacuum,\n    last_autovacuum,\n    last_analyze,\n    last_autoanalyze\nFROM pg_stat_user_tables \nWHERE schemaname = 'bookings'\nORDER BY n_tup_ins + n_tup_upd + n_tup_del DESC",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | last_vacuum | last_autovacuum | last_analyze | last_autoanalyze\n--------+-----------+-----------+-----------+---------------+------------+------------+-------------+-----------------+--------------+-----------------\nticket_flights | 8391852 | 0 | 0 | 0 | 8392989 | 0 | NULL | 2026-04-02 15:08:31.869607+00:00 | 2026-04-04 14:00:10.809384+00:00 | 2026-04-02 15:08:33.528359+00:00\nboarding_passes | 7925812 | 0 | 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT \n    relname,\n    pg_size_pretty(pg_total_relation_size(relid)) as total_size,\n    pg_size_pretty(pg_indexes_size(relid)) as indexes_size,\n    pg_size_pretty(pg_total_relation_size(relid) - pg_indexes_size(relid)) as table_size\nFROM pg_catalog.pg_statio_user_tables \nWHERE schemaname = 'bookings'\nORDER BY pg_total_relation_size(relid) DESC",
+          "output": "relname | total_size | indexes_size | table_size\n--------+------------+--------------+-----------\nboarding_passes | 1102 MB | 646 MB | 456 MB\nticket_flights | 930 MB | 383 MB | 547 MB\ntickets | 475 MB | 89 MB | 386 MB\nbookings | 151 MB | 45 MB | 105 MB\nflights | 48 MB | 17 MB | 30 MB\nseats | 144 kB | 48 kB | 96 kB\nairports_data | 72 kB | 16 kB | 56 kB\naircrafts_data | 32 kB | 16 kB | 16 kB\n(8 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "ANALYZE bookings.ticket_flights",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.045,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_7",
+      "task_name": "Lock Contention",
+      "difficulty": "medium",
+      "fault_type": "lock_contention",
+      "is_resolved": true,
+      "grader_score": 0.85,
+      "steps_used": 5,
+      "elapsed_s": 7.3,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "id_blocker_pattern": 0.1,
+        "id_target_table": 0.1,
+        "res_no_lock_waits": 0.25,
+        "res_no_blocked_queries": 0.15,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_targeted_kill": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT now() - pg_stat_activity.query_start AS duration, \n       pg_stat_activity.pid,\n       pg_stat_activity.query,\n       pg_stat_activity.state\nFROM pg_stat_activity\nWHERE pg_stat_activity.query ~ 'bookings'\n  AND pg_stat_activity.state = 'active'\nORDER BY duration DESC;",
+          "output": "duration | pid | query | state\n---------+-------+-------+------\n0:00:01.920106 | 214 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:01.914371 | 216 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:01.908353 | 218 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:00 | 220 | SELECT now() - pg_stat_activity.query_start AS duration, \n       pg_stat_ac",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_blocking_pids(pid) AS blocked_by, pid, query FROM pg_stat_activity WHERE pid IN (214, 216, 218);",
+          "output": "blocked_by | pid | query\n-----------+-------+------\n[212] | 214 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07'\n[214] | 216 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07'\n[214, 216] | 218 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07'\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pid, query, state, wait_event_type, wait_event \nFROM pg_stat_activity \nWHERE pid = 212;",
+          "output": "pid | query | state | wait_event_type | wait_event\n------+-------+-------+-----------------+-----------\n212 | SELECT pg_backend_pid() | idle in transaction | Client | ClientRead\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT * FROM pg_stat_activity WHERE pid = 212;",
+          "output": "datid | datname | pid | leader_pid | usesysid | usename | application_name | client_addr | client_hostname | client_port | backend_start | xact_start | query_start | state_change | wait_event_type | wait_event | state | backend_xid | backend_xmin | query_id | query | backend_type\n------+---------+-------+------------+----------+---------+------------------+-------------+-----------------+-------------+---------------+------------+-------------+--------------+-----------------+------------+------",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT pg_terminate_backend(212);",
+          "output": "pg_terminate_backend\n--------------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.475,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_8",
+      "task_name": "Table Bloat / Vacuum Stuck",
+      "difficulty": "medium",
+      "fault_type": "table_bloat",
+      "is_resolved": true,
+      "grader_score": 0.75,
+      "steps_used": 9,
+      "elapsed_s": 10.8,
+      "grader_breakdown": {
+        "inv_checked_stats": 0.1,
+        "id_dead_tuples": 0.1,
+        "res_blocker_gone": 0.15,
+        "res_dead_tuples_reduced": 0.25,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_ran_vacuum": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nbookings | 2111110 | 10004 | 0 | 2111110 | 10004\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.bookings')) AS total_size, pg_size_pretty(pg_table_size('bookings.bookings')) AS table_size;",
+          "output": "total_size | table_size\n-----------+-----------\n151 MB | 106 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname IN ('tickets', 'ticket_flights', 'boarding_passes');",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nboarding_passes | 7925812 | 0 | 0 | 7924586 | 0\nticket_flights | 8391852 | 0 | 0 | 8392402 | 0\ntickets | 2949857 | 0 | 0 | 2949376 | 0\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT schemaname, tablename, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": null,
+          "error": "ERROR: column \"tablename\" does not exist\nLINE 1: SELECT schemaname, tablename, last_vacuum, last_autovacuum, ...\n                           ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT schemaname, relname, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": "schemaname | relname | last_vacuum | last_autovacuum | vacuum_count | autovacuum_count\n-----------+---------+-------------+-----------------+--------------+-----------------\nbookings | bookings | NULL | 2026-04-02 15:08:11.956292+00:00 | 0 | 1\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT pg_stat_get_autovacuum_count('bookings.bookings'::regclass);",
+          "output": "pg_stat_get_autovacuum_count\n----------------------------\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT current_setting('autovacuum') AS autovacuum_enabled, current_setting('autovacuum_vacuum_threshold') AS vacuum_threshold, current_setting('autovacuum_vacuum_scale_factor') AS vacuum_scale_factor;",
+          "output": "autovacuum_enabled | vacuum_threshold | vacuum_scale_factor\n-------------------+------------------+--------------------\non | 50 | 0.2\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup, (n_dead_tup::float / n_live_tup::float * 100) AS dead_percentage FROM pg_stat_user_tables WHERE relname = 'bookings';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup | dead_percentage\n--------+-----------+-----------+-----------+------------+------------+----------------\nbookings | 2111110 | 10004 | 0 | 2111110 | 10004 | 0.4738739336178598\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "VACUUM bookings.bookings;",
+          "output": "VACUUM",
+          "error": null,
+          "reward": 0.375,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_9",
+      "task_name": "Over-Indexing",
+      "difficulty": "medium",
+      "fault_type": "over_indexing",
+      "is_resolved": false,
+      "grader_score": 0.5275,
+      "steps_used": 15,
+      "elapsed_s": 20.4,
+      "grader_breakdown": {
+        "inv_checked_index_stats": 0.1,
+        "inv_checked_table": 0.1,
+        "id_target_table": 0.1,
+        "res_junk_dropped": 0.0,
+        "res_pk_preserved": 0.15,
+        "_efficiency_mult": 0.85,
+        "bp_no_destructive": 0.05,
+        "bp_essential_preserved": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'ticket_flights';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nticket_flights | 0 | 0 | 0 | 0 | 0\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS table_size;",
+          "output": "table_size\n----------\n966 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT indexname, pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS index_size FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings';",
+          "output": "indexname | index_size\n----------+-----------\nticket_flights_pkey | 420 MB\nidx_ticket_flights_ticket_no_flight_id | 420 MB\nidx_ticket_flights_flight | 420 MB\nidx_tf_junk1 | 420 MB\nidx_tf_junk2 | 420 MB\nidx_tf_junk3 | 420 MB\n(6 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'ticket_flights';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nticket_flights | 0 | 0 | 0 | 0 | 0\n(1 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT * FROM pg_stat_statements_reset();",
+          "output": null,
+          "error": "ERROR: function pg_stat_statements_reset() does not exist\nLINE 1: SELECT * FROM pg_stat_statements_reset();\n                      ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts.",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT * FROM pg_stat_statements LIMIT 5;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_statements\" does not exist\nLINE 1: SELECT * FROM pg_stat_statements LIMIT 5;\n                      ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT schemaname, tablename, indexname, idx_tup_read, idx_tup_fetch FROM pg_stat_user_indexes WHERE tablename = 'ticket_flights';",
+          "output": null,
+          "error": "ERROR: column \"tablename\" does not exist\nLINE 1: SELECT schemaname, tablename, indexname, idx_tup_read, idx_t...\n                           ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT schemaname, relname, indexname, idx_tup_read, idx_tup_fetch FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": null,
+          "error": "ERROR: column \"indexname\" does not exist\nLINE 1: SELECT schemaname, relname, indexname, idx_tup_read, idx_tup...\n                                    ^\nHINT:  Perhaps you meant to reference the column \"pg_stat_user_indexes.indexrelname\".",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT schemaname, relname, indexrelname, idx_tup_read, idx_tup_fetch FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": "schemaname | relname | indexrelname | idx_tup_read | idx_tup_fetch\n-----------+---------+--------------+--------------+--------------\nbookings | ticket_flights | ticket_flights_pkey | 0 | 0\nbookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 0 | 0\nbookings | ticket_flights | idx_ticket_flights_flight | 0 | 0\nbookings | ticket_flights | idx_tf_junk1 | 0 | 0\nbookings | ticket_flights | idx_tf_junk2 | 0 | 0\nbookings | ticket_flights | idx_tf_junk3 | 0 | 0\n(6 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT * FROM pg_stat_user_tables WHERE relname = 'ticket_flights';",
+          "output": "relid | schemaname | relname | seq_scan | last_seq_scan | seq_tup_read | idx_scan | last_idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_tup_newpage_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum | last_analyze | last_autoanalyze | vacuum_count | autovacuum_count | analyze_count | autoanalyze_count\n------+------------+---------+----------+---------------+--------------+----------+---------------+----------",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT pg_stat_get_backend_pid(s.backendid) AS pid, s.datname, s.usename, s.application_name, s.client_addr, s.query, s.state, s.query_start FROM pg_stat_statements s JOIN pg_stat_activity a ON s.backendid = a.backend_id WHERE s.query LIKE '%ticket_flights%' AND s.query_start > NOW() - INTERVAL '1 hour' ORDER BY s.query_start DESC LIMIT 5;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_statements\" does not exist\nLINE 1: ...client_addr, s.query, s.state, s.query_start FROM pg_stat_st...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT relname, pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS total_size, pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS indexes_size FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relname = 'ticket_flights' AND n.nspname = 'bookings';",
+          "output": "relname | total_size | indexes_size\n--------+------------+-------------\nticket_flights | 966 MB | 420 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT count(*) FROM bookings.ticket_flights;",
+          "output": "count\n-----\n8391852\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT pg_relation_size('bookings.ticket_flights') AS table_size, pg_indexes_size('bookings.ticket_flights') AS indexes_size;",
+          "output": "table_size | indexes_size\n-----------+-------------\n573112320 | 439951360\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS total_size FROM pg_stat_user_tables WHERE relname = 'ticket_flights';",
+          "output": "relname | total_size\n--------+-----------\nticket_flights | 966 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.2637,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_10",
+      "task_name": "Index Bloat / Fragmented Index",
+      "difficulty": "medium",
+      "fault_type": "index_bloat",
+      "is_resolved": false,
+      "grader_score": 0.675,
+      "steps_used": 15,
+      "elapsed_s": 83.2,
+      "grader_breakdown": {
+        "inv_checked_size": 0.1,
+        "inv_checked_index_stats": 0.1,
+        "id_target_index": 0.1,
+        "id_bloat_detected": 0.1,
+        "res_index_rebuilt": 0.3,
+        "_efficiency_mult": 0.75,
+        "bp_no_destructive": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT schemaname, tablename, indexname, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS table_size, pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) AS indexes_size FROM pg_tables t JOIN pg_index i ON t.tablename = i.indrelid::regclass::text JOIN pg_class c ON i.indexrelid = c.oid WHERE t.schemaname = 'bookings' AND t.tablename = 'ticket_flights' ORDER BY pg_indexes_size(schemaname||'.'||tablename) DESC;",
+          "output": null,
+          "error": "ERROR: column \"indexname\" does not exist\nLINE 1: SELECT schemaname, tablename, indexname, pg_size_pretty(pg_t...\n                                      ^",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS table_size, pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) AS indexes_size FROM pg_tables t JOIN pg_index i ON t.tablename = i.indrelid::regclass::text JOIN pg_class c ON i.indexrelid = c.oid WHERE t.schemaname = 'bookings' AND t.tablename = 'ticket_flights' ORDER BY pg_indexes_size(schemaname||'.'||tablename) DESC;",
+          "output": "schemaname | tablename | table_size | indexes_size\n-----------+-----------+------------+-------------\nbookings | ticket_flights | 936 MB | 383 MB\nbookings | ticket_flights | 936 MB | 383 MB\nbookings | ticket_flights | 936 MB | 383 MB\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT indexrelid::regclass AS index_name, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size, idx_tup_read, idx_tup_fetch FROM pg_stat_user_indexes WHERE relid = 'bookings.ticket_flights'::regclass ORDER BY pg_relation_size(indexrelid) DESC;",
+          "output": "index_name | index_size | idx_tup_read | idx_tup_fetch\n-----------+------------+--------------+--------------\nticket_flights_pkey | 325 MB | 0 | 0\nidx_ticket_flights_flight | 58 MB | 0 | 0\nidx_ticket_flights_ticket_no_flight_id | 0 bytes | 0 | 0\n(3 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS total_size, pg_size_pretty(pg_relation_size(relid)) AS table_size, pg_size_pretty(pg_indexes_size(relid)) AS indexes_size FROM pg_statio_user_tables WHERE relname = 'ticket_flights';",
+          "output": "relname | total_size | table_size | indexes_size\n--------+------------+------------+-------------\nticket_flights | 936 MB | 553 MB | 383 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT schemaname, tablename, indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings' ORDER BY pg_relation_size(indexrelid) DESC;",
+          "output": null,
+          "error": "ERROR: column \"indexrelid\" does not exist\nLINE 1: ...ename, indexname, pg_size_pretty(pg_relation_size(indexrelid...\n                                                             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings' ORDER BY pg_relation_size(indexrelid) DESC;",
+          "output": null,
+          "error": "ERROR: column \"indexrelid\" does not exist\nLINE 1: SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid...\n                                                          ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT indexname, pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS total_index_size FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings';",
+          "output": "indexname | total_index_size\n----------+-----------------\nticket_flights_pkey | 383 MB\nidx_ticket_flights_ticket_no_flight_id | 383 MB\nidx_ticket_flights_flight | 383 MB\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT pg_size_pretty(pg_relation_size('bookings.ticket_flights_pkey')) AS pkey_size, pg_size_pretty(pg_relation_size('bookings.idx_ticket_flights_flight')) AS flight_index_size, pg_size_pretty(pg_relation_size('bookings.idx_ticket_flights_ticket_no_flight_id')) AS ticket_flight_index_size;",
+          "output": "pkey_size | flight_index_size | ticket_flight_index_size\n----------+-------------------+-------------------------\n325 MB | 58 MB | 0 bytes\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT relname, pg_size_pretty(pg_relation_size(relid)) AS size FROM pg_statio_user_indexes WHERE relname IN ('ticket_flights_pkey', 'idx_ticket_flights_flight', 'idx_ticket_flights_ticket_no_flight_id') ORDER BY pg_relation_size(relid) DESC;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT indexrelid::regclass::text AS index_name, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size FROM pg_index WHERE indrelid = 'bookings.ticket_flights'::regclass ORDER BY pg_relation_size(indexrelid) DESC;",
+          "output": "index_name | index_size\n-----------+-----------\nticket_flights_pkey | 325 MB\nidx_ticket_flights_flight | 58 MB\nidx_ticket_flights_ticket_no_flight_id | 0 bytes\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "REINDEX INDEX bookings.idx_ticket_flights_ticket_no_flight_id;",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT pg_stat_get_live_tuples('bookings.ticket_flights'::regclass) AS live_tuples, pg_stat_get_dead_tuples('bookings.ticket_flights'::regclass) AS dead_tuples;",
+          "output": "live_tuples | dead_tuples\n------------+------------\n0 | 100000\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "REINDEX TABLE bookings.ticket_flights;",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS total_size, pg_size_pretty(pg_relation_size('bookings.ticket_flights')) AS table_size, pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS indexes_size;",
+          "output": "total_size | table_size | indexes_size\n-----------+------------+-------------\n936 MB | 553 MB | 383 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.3375,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_11",
+      "task_name": "Wrong Index Column Order",
+      "difficulty": "medium",
+      "fault_type": "wrong_index_order",
+      "is_resolved": true,
+      "grader_score": 1.0,
+      "steps_used": 9,
+      "elapsed_s": 21.3,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "inv_checked_indexes": 0.1,
+        "id_column_order": 0.1,
+        "id_composite_key": 0.1,
+        "res_standalone_index": 0.2,
+        "res_plan_improved": 0.2,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_concurrently": 0.05,
+        "bp_pk_preserved": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 1234;",
+          "output": "QUERY PLAN\n----------\nGather  (cost=1000.00..115000.05 rows=103 width=32) (actual time=96.412..369.051 rows=110 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  ->  Parallel Seq Scan on ticket_flights  (cost=0.00..113989.75 rows=43 width=32) (actual time=71.923..339.429 rows=37 loops=3)\n        Filter: (flight_id = 1234)\n        Rows Removed by Filter: 2797247\nPlanning Time: 0.836 ms\nJIT:\n  Functions: 6\n  Options: Inlining false, Optimization false, Expressions true, Deforming true\n  Timing",
+          "error": null,
+          "reward": 0.02,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT COUNT(*) FROM bookings.ticket_flights WHERE flight_id = 1234;",
+          "output": "count\n-----\n110\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS table_size;",
+          "output": "table_size\n----------\n878 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT attname, n_distinct, correlation FROM pg_stats WHERE tablename = 'ticket_flights' AND schemaname = 'bookings';",
+          "output": "attname | n_distinct | correlation\n--------+------------+------------\namount | 373.0 | -0.26954553\nflight_id | 80759.0 | 0.21550713\nticket_no | -0.34639183 | 0.094499275\nfare_conditions | 3.0 | 0.87090427\n(4 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'ticket_flights' AND schemaname = 'bookings';",
+          "output": "indexname | indexdef\n----------+---------\nticket_flights_pkey | CREATE UNIQUE INDEX ticket_flights_pkey ON bookings.ticket_flights USING btree (ticket_no, flight_id)\nidx_ticket_flights_ticket_no_flight_id | CREATE INDEX idx_ticket_flights_ticket_no_flight_id ON bookings.ticket_flights USING btree (ticket_no, flight_id)\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT COUNT(*) FROM bookings.ticket_flights;",
+          "output": "count\n-----\n8391852\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 1234;",
+          "output": "QUERY PLAN\n----------\nGather  (cost=1000.00..115500.59 rows=99 width=32) (actual time=91.190..359.352 rows=110 loops=1)\n  Workers Planned: 2\n  Workers Launched: 2\n  ->  Parallel Seq Scan on ticket_flights  (cost=0.00..114490.69 rows=41 width=32) (actual time=68.181..329.850 rows=37 loops=3)\n        Filter: (flight_id = 1234)\n        Rows Removed by Filter: 2797247\nPlanning Time: 0.288 ms\nJIT:\n  Functions: 6\n  Options: Inlining false, Optimization false, Expressions true, Deforming true\n  Timing:",
+          "error": null,
+          "reward": -0.06,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "CREATE INDEX CONCURRENTLY idx_ticket_flights_flight_id ON bookings.ticket_flights (flight_id);",
+          "output": "CREATE INDEX",
+          "error": null,
+          "reward": 0.6,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_12",
+      "task_name": "Compound: Stale Stats + Missing Index",
+      "difficulty": "hard",
+      "fault_type": "compound_stats_index",
+      "is_resolved": false,
+      "grader_score": 0.6775,
+      "steps_used": 15,
+      "elapsed_s": 21.3,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "inv_checked_catalogs": 0.1,
+        "id_missing_index": 0.1,
+        "id_stale_stats": 0.1,
+        "res_analyze_ran": 0.15,
+        "_efficiency_mult": 0.85,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_concurrently": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, f.departure_airport, f.arrival_airport \nFROM bookings.ticket_flights tf \nJOIN bookings.flights f ON tf.flight_id = f.flight_id \nWHERE tf.ticket_no = '0005432100001'",
+          "output": "QUERY PLAN\n----------\nNested Loop  (cost=0.98..33.93 rows=3 width=50) (actual time=0.249..0.252 rows=1 loops=1)\n  ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..8.61 rows=3 width=18) (actual time=0.132..0.133 rows=1 loops=1)\n        Index Cond: (ticket_no = '0005432100001'::bpchar)\n        Heap Fetches: 0\n  ->  Index Scan using flights_pkey on flights f  (cost=0.42..8.44 rows=1 width=36) (actual time=0.111..0.111 rows=1 loops=1)\n        Index Cond: (flight_id = t",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT count(*) FROM bookings.flights WHERE flight_id IN (SELECT flight_id FROM bookings.ticket_flights WHERE ticket_no = '0005432100001')",
+          "output": "count\n-----\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.flights')) AS flights_size, pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS ticket_flights_size",
+          "output": "flights_size | ticket_flights_size\n-------------+--------------------\n48 MB | 878 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup \nFROM pg_stat_user_tables \nWHERE relname IN ('flights', 'ticket_flights')",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nflights | 0 | 0 | 0 | 0 | 0\nticket_flights | 0 | 100000 | 0 | 8395140 | 96525\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT count(*) FROM bookings.ticket_flights WHERE ticket_no = '0005432100001'",
+          "output": "count\n-----\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'flights'",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16413 | 16463 | bookings | flights | flights_flight_no_scheduled_departure_key | 0 | NULL | 0 | 0\n16413 | 16465 | bookings | flights | flights_pkey | 4 | 2026-04-04 14:04:32.193262+00:00 | 5 | 2\n(2 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'ticket_flights'",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 3 | 2026-04-04 14:04:33.702087+00:00 | 3 | 0\n16434 | 16513 | bookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 0 | NULL | 0 | 0\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT count(*) FROM bookings.ticket_flights tf JOIN bookings.flights f ON tf.flight_id = f.flight_id WHERE tf.ticket_no = '0005432100001'",
+          "output": "count\n-----\n1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "ANALYZE bookings.flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "EXPLAIN ANALYZE SELECT tf.ticket_no, tf.flight_id, f.departure_airport, f.arrival_airport \nFROM bookings.ticket_flights tf \nJOIN bookings.flights f ON tf.flight_id = f.flight_id \nWHERE tf.ticket_no = '0005432100001'",
+          "output": "QUERY PLAN\n----------\nNested Loop  (cost=0.98..33.93 rows=3 width=26) (actual time=0.069..0.071 rows=1 loops=1)\n  ->  Index Only Scan using ticket_flights_pkey on ticket_flights tf  (cost=0.56..8.61 rows=3 width=18) (actual time=0.050..0.052 rows=1 loops=1)\n        Index Cond: (ticket_no = '0005432100001'::bpchar)\n        Heap Fetches: 0\n  ->  Index Scan using flights_pkey on flights f  (cost=0.42..8.44 rows=1 width=12) (actual time=0.011..0.011 rows=1 loops=1)\n        Index Cond: (flight_id = t",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT * FROM pg_statio_user_indexes WHERE relname = 'flights'",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_blks_read | idx_blks_hit\n------+------------+------------+---------+--------------+---------------+-------------\n16413 | 16463 | bookings | flights | flights_flight_no_scheduled_departure_key | 1345 | 299992\n16413 | 16465 | bookings | flights | flights_pkey | 890 | 300014\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT * FROM pg_statio_user_indexes WHERE relname = 'ticket_flights'",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_blks_read | idx_blks_hit\n------+------------+------------+---------+--------------+---------------+-------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 42959 | 356910\n16434 | 16513 | bookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 0 | 0\n(2 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "CREATE INDEX CONCURRENTLY idx_ticket_flights_ticket_no_flight_id ON bookings.ticket_flights (ticket_no, flight_id);",
+          "output": null,
+          "error": "ERROR: relation \"idx_ticket_flights_ticket_no_flight_id\" already exists",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS index_size;",
+          "output": "index_size\n----------\n325 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.3887,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_13",
+      "task_name": "Compound: Lock + Bloat",
+      "difficulty": "hard",
+      "fault_type": "compound_lock_bloat",
+      "is_resolved": false,
+      "grader_score": 0.685,
+      "steps_used": 15,
+      "elapsed_s": 23.4,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_lock_issue": 0.1,
+        "id_bloat_issue": 0.1,
+        "res_locks_freed": 0.15,
+        "_efficiency_mult": 0.9,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_ran_vacuum": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT now() - pg_stat_activity.query_start AS duration, \n       pg_stat_activity.pid,\n       pg_stat_activity.query,\n       pg_stat_activity.state\nFROM pg_stat_activity\nWHERE pg_stat_activity.query LIKE '%bookings%'\n  AND pg_stat_activity.state = 'active'\nORDER BY duration DESC;",
+          "output": "duration | pid | query | state\n---------+-------+-------+------\n0:00:01.913416 | 259 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:01.907659 | 261 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:01.901839 | 263 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | active\n0:00:00 | 265 | SELECT now() - pg_stat_activity.query_start AS duration, \n       pg_stat_ac",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT pg_backend_pid(), pg_locks.pid, pg_locks.mode, pg_locks.granted, pg_class.relname\nFROM pg_locks\nJOIN pg_class ON pg_locks.relation = pg_class.oid\nWHERE pg_class.relname = 'bookings'\nORDER BY pg_locks.pid;",
+          "output": "pg_backend_pid | pid | mode | granted | relname\n---------------+-------+-------+---------+--------\n265 | 257 | RowExclusiveLock | True | bookings\n265 | 259 | RowExclusiveLock | True | bookings\n265 | 259 | ExclusiveLock | True | bookings\n265 | 261 | RowExclusiveLock | True | bookings\n265 | 261 | ExclusiveLock | False | bookings\n265 | 263 | RowExclusiveLock | True | bookings\n265 | 263 | ExclusiveLock | False | bookings\n(7 rows)",
+          "error": null,
+          "reward": 0.02,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup\nFROM pg_stat_user_tables \nWHERE relname = 'bookings';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nbookings | 0 | 10000 | 0 | 0 | 10000\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT indexname, idx_tup_read, idx_tup_fetch\nFROM pg_stat_user_indexes \nWHERE relname = 'bookings';",
+          "output": null,
+          "error": "ERROR: column \"indexname\" does not exist\nLINE 1: SELECT indexname, idx_tup_read, idx_tup_fetch\n               ^\nHINT:  Perhaps you meant to reference the column \"pg_stat_user_indexes.indexrelname\".",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT indexrelname, idx_tup_read, idx_tup_fetch\nFROM pg_stat_user_indexes \nWHERE relname = 'bookings';",
+          "output": "indexrelname | idx_tup_read | idx_tup_fetch\n-------------+--------------+--------------\nbookings_pkey | 3 | 1\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT schemaname, tablename, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count\nFROM pg_stat_user_tables \nWHERE tablename = 'bookings';",
+          "output": null,
+          "error": "ERROR: column \"tablename\" does not exist\nLINE 1: SELECT schemaname, tablename, last_vacuum, last_autovacuum, ...\n                           ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT schemaname, relname, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count\nFROM pg_stat_user_tables \nWHERE relname = 'bookings';",
+          "output": "schemaname | relname | last_vacuum | last_autovacuum | vacuum_count | autovacuum_count\n-----------+---------+-------------+-----------------+--------------+-----------------\nbookings | bookings | NULL | NULL | 0 | 0\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.bookings')) AS total_size,\n       pg_size_pretty(pg_relation_size('bookings.bookings')) AS table_size,\n       pg_size_pretty(pg_indexes_size('bookings.bookings')) AS indexes_size;",
+          "output": "total_size | table_size | indexes_size\n-----------+------------+-------------\n152 MB | 106 MB | 46 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT a.attname, a.attnum, a.atttypid, t.typname, a.attstattarget\nFROM pg_attribute a\nJOIN pg_type t ON a.atttypid = t.oid\nWHERE a.attrelid = 'bookings.bookings'::regclass\nAND a.attnum > 0\nORDER BY a.attnum;",
+          "output": "attname | attnum | atttypid | typname | attstattarget\n--------+--------+----------+---------+--------------\nbook_ref | 1 | 1042 | bpchar | -1\nbook_date | 2 | 1184 | timestamptz | -1\ntotal_amount | 3 | 1700 | numeric | -1\n(3 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT pg_cancel_backend(259);",
+          "output": "pg_cancel_backend\n-----------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT pg_cancel_backend(261);",
+          "output": "pg_cancel_backend\n-----------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT pg_cancel_backend(263);",
+          "output": "pg_cancel_backend\n-----------------\nTrue\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "ANALYZE bookings.bookings;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "VACUUM ANALYZE bookings.bookings;",
+          "output": "VACUUM",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT pg_stat_user_tables.n_tup_upd, pg_stat_user_tables.n_dead_tup\nFROM pg_stat_user_tables \nWHERE relname = 'bookings';",
+          "output": "n_tup_upd | n_dead_tup\n----------+-----------\n10000 | 19956\n(1 rows)",
+          "error": null,
+          "reward": 0.3425,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_14",
+      "task_name": "Deadlock Chain",
+      "difficulty": "hard",
+      "fault_type": "deadlock_chain",
+      "is_resolved": true,
+      "grader_score": 0.8,
+      "steps_used": 8,
+      "elapsed_s": 46.0,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_conflicting_txns": 0.1,
+        "res_no_blocked_txids": 0.2,
+        "res_no_lock_waits": 0.2,
+        "_efficiency_mult": 1.0,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT \n    pg_stat_activity.pid,\n    pg_stat_activity.query,\n    pg_stat_activity.state,\n    pg_stat_activity.wait_event_type,\n    pg_stat_activity.wait_event,\n    pg_stat_activity.xact_start,\n    pg_stat_activity.query_start,\n    pg_stat_activity.backend_start\nFROM pg_stat_activity\nWHERE pg_stat_activity.state = 'active'\nAND pg_stat_activity.query LIKE '%bookings%'\nORDER BY pg_stat_activity.query_start;",
+          "output": "pid | query | state | wait_event_type | wait_event | xact_start | query_start | backend_start\n------+-------+-------+-----------------+------------+------------+-------------+--------------\n268 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '363381' | active | Lock | transactionid | 2026-04-04 14:05:06.348054+00:00 | 2026-04-04 14:05:07.850910+00:00 | 2026-04-04 14:05:06.343961+00:00\n270 | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT \n    blocked_locks.pid AS blocked_pid,\n    blocked_activity.usename AS blocked_user,\n    blocking_locks.pid AS blocking_pid,\n    blocking_activity.usename AS blocking_user,\n    blocked_activity.query AS blocked_statement,\n    blocking_activity.query AS blocking_statement\nFROM pg_catalog.pg_locks blocked_locks\nJOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid\nJOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype\n    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database\n    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation\nJOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid\nWHERE NOT blocked_locks.granted;",
+          "output": "blocked_pid | blocked_user | blocking_pid | blocking_user | blocked_statement | blocking_statement\n------------+--------------+--------------+---------------+-------------------+-------------------\n270 | postgres | 270 | postgres | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07' | UPDATE bookings.bookings SET total_amount = total_amount WHERE book_ref = '361A07'\n268 | postgres | 270 | postgres | UPDATE bookings.bookings SET total_amount = total_amount WHERE boo",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT \n    pg_stat_statements.query,\n    pg_stat_statements.calls,\n    pg_stat_statements.total_time,\n    pg_stat_statements.mean_time,\n    pg_stat_statements.rows\nFROM pg_stat_statements\nWHERE pg_stat_statements.query LIKE '%bookings%'\nORDER BY pg_stat_statements.total_time DESC\nLIMIT 5;",
+          "output": null,
+          "error": "ERROR: relation \"pg_stat_statements\" does not exist\nLINE 7: FROM pg_stat_statements\n             ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT \n    relname,\n    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,\n    pg_size_pretty(pg_indexes_size(relid)) AS index_size,\n    pg_stat_get_live_tuples(relid) AS live_tuples,\n    pg_stat_get_dead_tuples(relid) AS dead_tuples\nFROM pg_stat_user_tables \nWHERE relname = 'bookings'\nORDER BY pg_total_relation_size(relid) DESC;",
+          "output": "relname | total_size | index_size | live_tuples | dead_tuples\n--------+------------+------------+-------------+------------\nbookings | 152 MB | 46 MB | 2111110 | 19957\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT \n    indexname,\n    indexdef\nFROM pg_indexes\nWHERE tablename = 'bookings'\nAND schemaname = 'bookings';",
+          "output": "indexname | indexdef\n----------+---------\nbookings_pkey | CREATE UNIQUE INDEX bookings_pkey ON bookings.bookings USING btree (book_ref)\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT \n    conname,\n    conrelid::regclass AS table_name,\n    conkey,\n    confrelid::regclass AS referenced_table,\n    confkey\nFROM pg_constraint\nWHERE conrelid::regclass = 'bookings.bookings'::regclass;",
+          "output": "conname | table_name | conkey | referenced_table | confkey\n--------+------------+--------+------------------+--------\nbookings_pkey | bookings | [1] | - | NULL\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "EXPLAIN ANALYZE\nUPDATE bookings.bookings \nSET total_amount = total_amount \nWHERE book_ref = '363381';",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT \n    pg_backend_pid() AS current_pid,\n    pg_cancel_backend(268) AS cancelled_268,\n    pg_cancel_backend(270) AS cancelled_270;",
+          "output": "current_pid | cancelled_268 | cancelled_270\n------------+---------------+--------------\n271 | True | True\n(1 rows)",
+          "error": null,
+          "reward": 0.4,
+          "done": true,
+          "resolved": true
+        }
+      ]
+    },
+    {
+      "task_id": "task_15",
+      "task_name": "Query Plan Flip",
+      "difficulty": "hard",
+      "fault_type": "query_plan_flip",
+      "is_resolved": false,
+      "grader_score": 0.35,
+      "steps_used": 15,
+      "elapsed_s": 123.0,
+      "grader_breakdown": {
+        "inv_ran_explain": 0.1,
+        "res_plan_uses_index": 0.2,
+        "_efficiency_mult": 0.75,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE ticket_no = '0005432000001'",
+          "output": "QUERY PLAN\n----------\nIndex Scan using ticket_flights_pkey on ticket_flights  (cost=0.56..399.78 rows=3 width=32) (actual time=0.097..0.097 rows=0 loops=1)\n  Index Cond: (ticket_no = '0005432000001'::bpchar)\nPlanning Time: 0.952 ms\nExecution Time: 0.187 ms\n(4 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT count(*) FROM bookings.ticket_flights WHERE ticket_no = '0005432000001'",
+          "output": "count\n-----\n0\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE flight_id = 12345",
+          "output": "QUERY PLAN\n----------\nIndex Scan using idx_ticket_flights_flight on ticket_flights  (cost=0.43..10207.13 rows=106 width=32) (actual time=0.129..0.429 rows=22 loops=1)\n  Index Cond: (flight_id = 12345)\nPlanning Time: 0.182 ms\nExecution Time: 0.455 ms\n(4 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT pg_size_pretty(pg_total_relation_size('bookings.ticket_flights')) AS table_size;",
+          "output": "table_size\n----------\n936 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup \nFROM pg_stat_user_tables \nWHERE relname = 'ticket_flights';",
+          "output": "relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n--------+-----------+-----------+-----------+------------+-----------\nticket_flights | 0 | 100000 | 0 | 8389762 | 101903\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 7 | 2026-04-04 14:05:55.531559+00:00 | 5 | 0\n16434 | 16513 | bookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 0 | NULL | 0 | 0\n16434 | 16526 | bookings | ticket_flights | idx_ticket_fl",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT pg_size_pretty(pg_indexes_size('bookings.ticket_flights')) AS indexes_size;",
+          "output": "indexes_size\n------------\n383 MB\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "ANALYZE bookings.ticket_flights;",
+          "output": "ANALYZE",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE ticket_no = '0005432000001'",
+          "output": "QUERY PLAN\n----------\nIndex Scan using ticket_flights_pkey on ticket_flights  (cost=0.56..399.77 rows=3 width=32) (actual time=0.035..0.036 rows=0 loops=1)\n  Index Cond: (ticket_no = '0005432000001'::bpchar)\nPlanning Time: 0.321 ms\nExecution Time: 0.058 ms\n(4 rows)",
+          "error": null,
+          "reward": -0.06,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 7 | 2026-04-04 14:05:55.531559+00:00 | 5 | 0\n16434 | 16513 | bookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 0 | NULL | 0 | 0\n16434 | 16526 | bookings | ticket_flights | idx_ticket_fl",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT pg_stat_get_live_tuples('16434'::regclass) AS live_tuples, pg_stat_get_dead_tuples('16434'::regclass) AS dead_tuples;",
+          "output": "live_tuples | dead_tuples\n------------+------------\n8390394 | 101526\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "REINDEX TABLE bookings.ticket_flights;",
+          "output": null,
+          "error": "ERROR: canceling statement due to statement timeout",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SET statement_timeout = 0; REINDEX TABLE bookings.ticket_flights;",
+          "output": "REINDEX",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "EXPLAIN ANALYZE SELECT * FROM bookings.ticket_flights WHERE ticket_no = '0005432000001'",
+          "output": "QUERY PLAN\n----------\nIndex Scan using idx_ticket_flights_ticket_no_flight_id on ticket_flights  (cost=0.56..399.77 rows=3 width=32) (actual time=0.065..0.066 rows=0 loops=1)\n  Index Cond: (ticket_no = '0005432000001'::bpchar)\nPlanning Time: 0.487 ms\nExecution Time: 0.090 ms\n(4 rows)",
+          "error": null,
+          "reward": -0.06,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT * FROM pg_stat_user_indexes WHERE relname = 'ticket_flights';",
+          "output": "relid | indexrelid | schemaname | relname | indexrelname | idx_scan | last_idx_scan | idx_tup_read | idx_tup_fetch\n------+------------+------------+---------+--------------+----------+---------------+--------------+--------------\n16434 | 16469 | bookings | ticket_flights | ticket_flights_pkey | 8 | 2026-04-04 14:06:03.151514+00:00 | 5 | 0\n16434 | 16513 | bookings | ticket_flights | idx_ticket_flights_ticket_no_flight_id | 1 | 2026-04-04 14:07:55.037142+00:00 | 0 | 0\n16434 | 16526 | bookings | ti",
+          "error": null,
+          "reward": 0.145,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_16",
+      "task_name": "Cascading Bloat (Multi-Table)",
+      "difficulty": "hard",
+      "fault_type": "cascading_bloat",
+      "is_resolved": false,
+      "grader_score": 0.5394,
+      "steps_used": 15,
+      "elapsed_s": 22.4,
+      "grader_breakdown": {
+        "inv_checked_tables": 0.1,
+        "id_multi_table": 0.1,
+        "res_blocker_gone": 0.15,
+        "res_tables_cleaned": 0.062,
+        "_efficiency_mult": 0.95,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_vacuumed_all": 0.038
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'bookings' ORDER BY n_dead_tup DESC;",
+          "output": null,
+          "error": "ERROR: column \"tablename\" does not exist\nLINE 1: SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_de...\n                           ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT schemaname, relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'bookings' ORDER BY n_dead_tup DESC;",
+          "output": "schemaname | relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup\n-----------+---------+-----------+-----------+-----------+------------+-----------\nbookings | ticket_flights | 0 | 150000 | 0 | 8390394 | 151526\nbookings | bookings | 0 | 60003 | 0 | 2111110 | 69959\nbookings | flights | 0 | 150000 | 0 | 183119 | 50000\nbookings | tickets | 0 | 50000 | 0 | 0 | 50000\nbookings | boarding_passes | 0 | 0 | 0 | 0 | 0\nbookings | aircrafts_data | 0 | 0 | 0 | 0 | 0\nbookings | airports_data ",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT relname, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count FROM pg_stat_user_tables WHERE schemaname = 'bookings' ORDER BY n_dead_tup DESC;",
+          "output": "relname | last_vacuum | last_autovacuum | vacuum_count | autovacuum_count\n--------+-------------+-----------------+--------------+-----------------\nticket_flights | 2026-04-04 14:04:05.045916+00:00 | NULL | 1 | 0\nbookings | 2026-04-04 14:05:04.967304+00:00 | NULL | 1 | 0\nflights | NULL | 2026-04-04 14:05:39.068882+00:00 | 0 | 2\ntickets | NULL | NULL | 0 | 0\nboarding_passes | NULL | NULL | 0 | 0\naircrafts_data | NULL | NULL | 0 | 0\nairports_data | NULL | NULL | 0 | 0\nseats | NULL | NULL | 0 | 0\n(",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT current_setting('autovacuum');",
+          "output": "current_setting\n---------------\non\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT current_setting('autovacuum_vacuum_threshold');",
+          "output": "current_setting\n---------------\n50\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT current_setting('autovacuum_vacuum_scale_factor');",
+          "output": "current_setting\n---------------\n0.2\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT current_setting('autovacuum_analyze_threshold');",
+          "output": "current_setting\n---------------\n50\n(1 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT current_setting('autovacuum_analyze_scale_factor');",
+          "output": "current_setting\n---------------\n0.1\n(1 rows)",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT current_setting('autovacuum_max_workers');",
+          "output": "current_setting\n---------------\n3\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT current_setting('autovacuum_naptime');",
+          "output": "current_setting\n---------------\n1min\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT autovacuum_vacuum_threshold, autovacuum_vacuum_scale_factor, autovacuum_analyze_threshold, autovacuum_analyze_scale_factor FROM pg_settings WHERE name IN ('autovacuum_vacuum_threshold', 'autovacuum_vacuum_scale_factor', 'autovacuum_analyze_threshold', 'autovacuum_analyze_scale_factor');",
+          "output": null,
+          "error": "ERROR: column \"autovacuum_vacuum_threshold\" does not exist\nLINE 1: SELECT autovacuum_vacuum_threshold, autovacuum_vacuum_scale_...\n               ^",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT name, setting FROM pg_settings WHERE name LIKE 'autovacuum%';",
+          "output": "name | setting\n------+--------\nautovacuum | on\nautovacuum_analyze_scale_factor | 0.1\nautovacuum_analyze_threshold | 50\nautovacuum_freeze_max_age | 200000000\nautovacuum_max_workers | 3\nautovacuum_multixact_freeze_max_age | 400000000\nautovacuum_naptime | 60\nautovacuum_vacuum_cost_delay | 2\nautovacuum_vacuum_cost_limit | -1\nautovacuum_vacuum_insert_scale_factor | 0.2\nautovacuum_vacuum_insert_threshold | 1000\nautovacuum_vacuum_scale_factor | 0.2\nautovacuum_vacuum_threshold | 50\nautovacuum_work_mem |",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT schemaname, relname, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup, last_autovacuum FROM pg_stat_user_tables WHERE schemaname = 'bookings' AND n_dead_tup > 0 ORDER BY n_dead_tup DESC;",
+          "output": "schemaname | relname | n_tup_ins | n_tup_upd | n_tup_del | n_live_tup | n_dead_tup | last_autovacuum\n-----------+---------+-----------+-----------+-----------+------------+------------+----------------\nbookings | ticket_flights | 0 | 150000 | 0 | 8390394 | 151526 | NULL\nbookings | bookings | 0 | 60003 | 0 | 2111110 | 69959 | NULL\nbookings | flights | 0 | 150000 | 0 | 183119 | 50000 | 2026-04-04 14:05:39.068882+00:00\nbookings | tickets | 0 | 50000 | 0 | 0 | 50000 | NULL\n(4 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "VACUUM ANALYZE bookings.ticket_flights;",
+          "output": "VACUUM",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "VACUUM ANALYZE bookings.bookings;",
+          "output": "VACUUM",
+          "error": null,
+          "reward": 0.2397,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    },
+    {
+      "task_id": "task_17",
+      "task_name": "Compound: Connection Exhaustion + Deadlock",
+      "difficulty": "hard",
+      "fault_type": "compound_conn_deadlock",
+      "is_resolved": false,
+      "grader_score": 0.5925,
+      "steps_used": 15,
+      "elapsed_s": 25.2,
+      "grader_breakdown": {
+        "inv_checked_activity": 0.1,
+        "inv_checked_locks": 0.1,
+        "id_idle_problem": 0.1,
+        "res_idle_cleared": 0.15,
+        "_efficiency_mult": 0.95,
+        "bp_no_destructive": 0.05,
+        "bp_clean_execution": 0.05,
+        "bp_targeted_terminate": 0.05
+      },
+      "steps": [
+        {
+          "step": 1,
+          "command": "SELECT pg_backend_pid(), pg_stat_activity.state, pg_stat_activity.query, pg_stat_activity.wait_event_type, pg_stat_activity.wait_event FROM pg_stat_activity WHERE pg_stat_activity.state = 'active' OR pg_stat_activity.state = 'idle in transaction' ORDER BY pg_stat_activity.query_start;",
+          "output": "pg_backend_pid | state | query | wait_event_type | wait_event\n---------------+-------+-------+-----------------+-----------\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transaction | SELECT 1 | Client | ClientRead\n383 | idle in transact",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 2,
+          "command": "SELECT count(*) as total_connections, count(CASE WHEN state = 'active' THEN 1 END) as active_connections, count(CASE WHEN state = 'idle in transaction' THEN 1 END) as idle_transactions FROM pg_stat_activity;",
+          "output": "total_connections | active_connections | idle_transactions\n------------------+--------------------+------------------\n89 | 3 | 80\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 3,
+          "command": "SELECT pid, query, state, query_start, backend_start, xact_start, wait_event_type, wait_event FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY xact_start;",
+          "output": "pid | query | state | query_start | backend_start | xact_start | wait_event_type | wait_event\n------+-------+-------+-------------+---------------+------------+-----------------+-----------\n298 | SELECT 1 | idle in transaction | 2026-04-04 14:08:17.970340+00:00 | 2026-04-04 14:08:17.966504+00:00 | 2026-04-04 14:08:17.970085+00:00 | Client | ClientRead\n299 | SELECT 1 | idle in transaction | 2026-04-04 14:08:17.975901+00:00 | 2026-04-04 14:08:17.972052+00:00 | 2026-04-04 14:08:17.975644+00:00 | Cl",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 4,
+          "command": "SELECT count(*) as total_locks, count(CASE WHEN locktype = 'transactionid' THEN 1 END) as transaction_locks FROM pg_locks;",
+          "output": "total_locks | transaction_locks\n------------+------------------\n94 | 4\n(1 rows)",
+          "error": null,
+          "reward": 0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 5,
+          "command": "SELECT pg_stat_database.datname, pg_stat_database.numbackends, pg_stat_database.xact_commit, pg_stat_database.xact_rollback, pg_stat_database.tup_returned, pg_stat_database.tup_fetched, pg_stat_database.tup_inserted, pg_stat_database.tup_updated, pg_stat_database.tup_deleted FROM pg_stat_database WHERE pg_stat_database.datname = 'demo';",
+          "output": "datname | numbackends | xact_commit | xact_rollback | tup_returned | tup_fetched | tup_inserted | tup_updated | tup_deleted\n--------+-------------+-------------+---------------+--------------+-------------+--------------+-------------+------------\ndemo | 84 | 1185 | 25 | 145069421 | 27105 | 22 | 510052 | 39\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 6,
+          "command": "SELECT l.locktype, l.database, l.relation, l.page, l.tuple, l.virtualxid, l.transactionid, l.classid, l.objid, l.objsubid, l.pid, l.mode, l.granted, l.fastpath FROM pg_locks l INNER JOIN pg_stat_activity a ON l.pid = a.pid WHERE a.state = 'idle in transaction' ORDER BY l.transactionid;",
+          "output": null,
+          "error": "ERROR: could not identify an ordering operator for type xid\nLINE 1: ...id WHERE a.state = 'idle in transaction' ORDER BY l.transact...\n                                                             ^\nHINT:  Use an explicit ordering operator or modify the query.",
+          "reward": -0.05,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 7,
+          "command": "SELECT l.locktype, l.database, l.relation, l.page, l.tuple, l.virtualxid, l.classid, l.objid, l.objsubid, l.pid, l.mode, l.granted, l.fastpath FROM pg_locks l INNER JOIN pg_stat_activity a ON l.pid = a.pid WHERE a.state = 'idle in transaction' AND l.transactionid IS NOT NULL;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": -0.03,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 8,
+          "command": "SELECT count(*) as total_idle_transactions FROM pg_stat_activity WHERE state = 'idle in transaction';",
+          "output": "total_idle_transactions\n-----------------------\n80\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 9,
+          "command": "SELECT pid, query, state, query_start, backend_start, xact_start FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - xact_start) > interval '5 minutes' ORDER BY xact_start;",
+          "output": "SELECT 0",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 10,
+          "command": "SELECT pid, query, state, query_start, backend_start, xact_start FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY xact_start LIMIT 5;",
+          "output": "pid | query | state | query_start | backend_start | xact_start\n------+-------+-------+-------------+---------------+-----------\n298 | SELECT 1 | idle in transaction | 2026-04-04 14:08:17.970340+00:00 | 2026-04-04 14:08:17.966504+00:00 | 2026-04-04 14:08:17.970085+00:00\n299 | SELECT 1 | idle in transaction | 2026-04-04 14:08:17.975901+00:00 | 2026-04-04 14:08:17.972052+00:00 | 2026-04-04 14:08:17.975644+00:00\n300 | SELECT 1 | idle in transaction | 2026-04-04 14:08:17.981478+00:00 | 2026-04-04 14:",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 11,
+          "command": "SELECT count(*) as total_connections FROM pg_stat_activity WHERE state = 'active' OR state = 'idle';",
+          "output": "total_connections\n-----------------\n5\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 12,
+          "command": "SELECT count(*) as total_idle_transactions FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - xact_start) > interval '1 minute';",
+          "output": "total_idle_transactions\n-----------------------\n0\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 13,
+          "command": "SELECT count(*) as total_idle_transactions FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - xact_start) > interval '30 seconds';",
+          "output": "total_idle_transactions\n-----------------------\n0\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 14,
+          "command": "SELECT count(*) as total_idle_transactions FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - xact_start) > interval '10 seconds';",
+          "output": "total_idle_transactions\n-----------------------\n80\n(1 rows)",
+          "error": null,
+          "reward": 0.0,
+          "done": false,
+          "resolved": false
+        },
+        {
+          "step": 15,
+          "command": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND (now() - xact_start) > interval '10 seconds' AND pid <> pg_backend_pid();",
+          "output": "pg_terminate_backend\n--------------------\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\n(80 rows)",
+          "error": null,
+          "reward": 0.3463,
+          "done": true,
+          "resolved": false
+        }
+      ]
+    }
+  ]
+}
