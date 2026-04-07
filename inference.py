@@ -155,16 +155,17 @@ async def main() -> None:
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    env = await DBSreEnv.from_docker_image(IMAGE_NAME)
-
     rewards: List[float] = []
     steps_taken = 0
     score = 0.0
     success = False
+    env = None
 
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
     try:
+        env = await DBSreEnv.from_docker_image(IMAGE_NAME)
+
         result = await env.reset(seed=None, task_id=TASK_NAME)
         obs = result.observation
         obs_data = obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
@@ -211,10 +212,11 @@ async def main() -> None:
         print(f"[DEBUG] Episode error: {exc}", flush=True)
 
     finally:
-        try:
-            await env.close()
-        except Exception as e:
-            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        if env is not None:
+            try:
+                await env.close()
+            except Exception as e:
+                print(f"[DEBUG] env.close() error: {e}", flush=True)
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 
