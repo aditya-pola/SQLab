@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: green
 sdk: docker
 pinned: false
+short_description: SRE skills to manage SQL DBs in prod
 ---
 
 # SQLab: Database Incident Response Training for LLM Agents
