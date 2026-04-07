@@ -44,5 +44,14 @@ else
 fi
 
 # ── Phase 3: Start FastAPI ──
-echo "=== Starting FastAPI server on port ${PORT:-8000} ==="
-exec /app/venv/bin/uvicorn sqlab.server.app:app --host 0.0.0.0 --port ${PORT:-8000}
+APP_PORT=${PORT:-7860}
+echo "=== Starting FastAPI server on port ${APP_PORT} ==="
+
+# OpenEnv's from_docker_image() maps external traffic to container port 8000.
+# If the app listens on a different port, forward 8000 → APP_PORT via socat.
+if [ "$APP_PORT" != "8000" ]; then
+    socat TCP-LISTEN:8000,fork,reuseaddr TCP:localhost:${APP_PORT} &
+    echo "=== Port forwarder: 8000 → ${APP_PORT} ==="
+fi
+
+exec /app/venv/bin/uvicorn sqlab.server.app:app --host 0.0.0.0 --port ${APP_PORT}

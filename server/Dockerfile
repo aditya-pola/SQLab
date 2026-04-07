@@ -36,7 +36,7 @@ FROM postgres:16
 # Install Python and build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv curl && \
+        python3 python3-pip python3-venv curl socat && \
     rm -rf /var/lib/apt/lists/*
 
 # Create venv and install Python deps
@@ -68,11 +68,11 @@ RUN pip install --no-cache-dir -e /app/
 # start.sh will copy this to the real data dir on first boot.
 COPY --from=data-loader /var/lib/postgresql/prebaked /var/lib/postgresql/prebaked
 
-# OpenEnv's from_docker_image() maps to container port 8000
-# HF Spaces uses app_port in README metadata to route to 8000
-EXPOSE 8000
+# HF Spaces routes to 7860 (default). OpenEnv's from_docker_image() maps to 8000.
+# start.sh forwards 8000→7860 via socat so both work.
+EXPOSE 7860 8000
 
-ENV PORT=8000
+ENV PORT=7860
 
 # Postgres env vars
 ENV POSTGRES_PASSWORD=srelab
