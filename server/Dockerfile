@@ -68,11 +68,11 @@ RUN pip install --no-cache-dir -e /app/
 # start.sh will copy this to the real data dir on first boot.
 COPY --from=data-loader /var/lib/postgresql/prebaked /var/lib/postgresql/prebaked
 
-# Expose ports: 8000 for local Docker, 7860 for HF Spaces
-EXPOSE 8000 7860
+# OpenEnv's from_docker_image() maps to container port 8000
+# HF Spaces uses app_port in README metadata to route to 8000
+EXPOSE 8000
 
-# HF Spaces routes traffic to port 7860
-ENV PORT=7860
+ENV PORT=8000
 
 # Postgres env vars
 ENV POSTGRES_PASSWORD=srelab
