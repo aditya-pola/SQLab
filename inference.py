@@ -2,17 +2,38 @@
 """
 SQLab Inference Script
 ===================================
-Runs an LLM agent against all 17 SQLab tasks (PostgreSQL incident response)
-and reports per-task scores in the mandatory OpenEnv stdout format.
+Runs an LLM agent against a single SQLab task (PostgreSQL incident response)
+and reports the result in the mandatory OpenEnv stdout format.
 
-Environment variables (MANDATORY):
-    API_BASE_URL       The API endpoint for the LLM (default: HF router)
-    MODEL_NAME         The model identifier to use for inference (default: Qwen2.5-72B)
-    HF_TOKEN           Your Hugging Face / API key (no default — must be set)
-    IMAGE_NAME         Docker image name for the SQLab environment (no default — must be set)
+Environment variables:
+    API_BASE_URL  API endpoint for the LLM        (default: HF router)
+    MODEL_NAME    Model identifier for inference   (default: Qwen2.5-72B)
+    HF_TOKEN      Hugging Face / API key           (required, no default)
+    IMAGE_NAME    Docker image for SQLab env       (required, no default)
+    TASK_NAME     Which task to run                (default: task_12)
+
+Available tasks:
+    Easy:   task_1  (Missing Index)
+            task_2  (Stale Statistics)
+            task_3  (Long-Running Transaction / Lock)
+            task_4  (Connection Exhaustion)
+            task_5  (Bad Configuration)
+    Medium: task_6  (Redundant Indexes)
+            task_7  (Lock Contention — UPDATE vs SELECT)
+            task_8  (Table Bloat / Vacuum Stuck)
+            task_9  (Over-Indexing)
+            task_10 (Index Bloat / Fragmented Index)
+            task_11 (Wrong Index Column Order)
+    Hard:   task_12 (Compound: Stale Stats + Missing Index)
+            task_13 (Compound: Lock + Bloat)
+            task_14 (Deadlock Chain)
+            task_15 (Query Plan Flip)
+            task_16 (Cascading Bloat — Multi-Table)
+            task_17 (Compound: Connection Exhaustion + Deadlock)
 
 Usage:
-    IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
+    TASK_NAME=task_1 IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
+    TASK_NAME=task_12 IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
 """
 
 from __future__ import annotations
@@ -20,7 +41,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import sys
 from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
@@ -36,19 +56,12 @@ IMAGE_NAME = os.getenv("IMAGE_NAME")  # No default — must be set explicitly
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+TASK_NAME = os.getenv("TASK_NAME", "task_12")
 
 BENCHMARK = "sqlab"
 MAX_STEPS = 15
 TEMPERATURE = 0.0  # Deterministic for reproducibility
 MAX_TOKENS = 500   # Sufficient for any single SQL command
-
-# All 17 tasks ordered by difficulty (easy -> medium -> hard)
-ALL_TASKS = [
-    "task_1", "task_2", "task_3", "task_4", "task_5",       # Easy
-    "task_6", "task_7", "task_8", "task_9", "task_10",       # Medium
-    "task_11", "task_12", "task_13", "task_14", "task_15",    # Medium + Hard
-    "task_16", "task_17",                                     # Hard
-]
 
 # ---------------------------------------------------------------------------
 # System prompt — deliberately minimal to test diagnostic ability
@@ -73,15 +86,12 @@ IMPORTANT RULES:
 
 
 def log_start(task: str, env: str, model: str) -> None:
-    """Emit [START] line per mandatory stdout format."""
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
-    """Emit [STEP] line per mandatory stdout format."""
     error_val = error if error else "null"
     done_val = str(done).lower()
-    # Truncate action to avoid very long lines
     action_short = action.replace("\n", " ")[:200]
     print(
         f"[STEP] step={step} action={action_short} reward={reward:.2f} done={done_val} error={error_val}",
@@ -89,21 +99,15 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
-    """Emit [END] line per mandatory stdout format."""
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
 
 
 def build_prompt(obs_data: Dict[str, Any]) -> str:
-    """Build the user prompt from an observation dict.
-
-    Includes the alert, last command output, error, metrics, and step count.
-    Mirrors real SRE incident context: observable symptoms + time pressure.
-    """
     parts = [f"ALERT: {obs_data.get('alert', 'No alert')}"]
 
     if obs_data.get("command_output"):
@@ -124,7 +128,6 @@ def build_prompt(obs_data: Dict[str, Any]) -> str:
 
 
 def extract_sql(text: str) -> str:
-    """Extract SQL from model response, stripping markdown code blocks if present."""
     text = text.strip()
     if "```" in text:
         blocks = text.split("```")
@@ -139,39 +142,37 @@ def extract_sql(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Episode runner
+# Main
 # ---------------------------------------------------------------------------
 
 
-async def run_episode(
-    env: DBSreEnv,
-    client: OpenAI,
-    task_id: str,
-) -> Dict[str, Any]:
-    """Run a single episode against one task.
+async def main() -> None:
+    if not API_KEY:
+        raise SystemExit(
+            "HF_TOKEN (or API_KEY) must be set to query the model.\n"
+            "  export HF_TOKEN=your_token_here"
+        )
 
-    Uses the OpenEnv client pattern (env.reset / env.step) with typed
-    DBSreAction actions and DBSreObservation observations.
-    """
-    log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    env = await DBSreEnv.from_docker_image(IMAGE_NAME)
 
     rewards: List[float] = []
     steps_taken = 0
     score = 0.0
     success = False
 
-    try:
-        # Reset environment to the specified task
-        result = await env.reset(seed=None, task_id=task_id)
-        obs = result.observation
+    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
+    try:
+        result = await env.reset(seed=None, task_id=TASK_NAME)
+        obs = result.observation
         obs_data = obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
 
         for step in range(1, MAX_STEPS + 1):
             if result.done:
                 break
 
-            # Build prompt from observation and get model response
             prompt = build_prompt(obs_data)
             completion = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -186,7 +187,6 @@ async def run_episode(
             raw_response = (completion.choices[0].message.content or "").strip()
             sql = extract_sql(raw_response)
 
-            # Execute the SQL command
             result = await env.step(DBSreAction(command=sql))
             obs = result.observation
             obs_data = obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
@@ -203,7 +203,6 @@ async def run_episode(
             if done:
                 break
 
-        # Extract final score from metadata
         metadata = obs_data.get("metadata", {})
         score = metadata.get("grader_score", 0.0) or 0.0
         success = metadata.get("resolved", False)
@@ -212,62 +211,12 @@ async def run_episode(
         print(f"[DEBUG] Episode error: {exc}", flush=True)
 
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
-
-    return {
-        "task_id": task_id,
-        "score": score,
-        "steps": steps_taken,
-        "success": success,
-        "rewards": rewards,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Entrypoint
-# ---------------------------------------------------------------------------
-
-
-async def async_main() -> None:
-    if not API_KEY:
-        raise SystemExit(
-            "HF_TOKEN (or API_KEY) must be set to query the model.\n"
-            "  export HF_TOKEN=your_token_here"
-        )
-
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-
-    # Connect to SQLab environment via OpenEnv client
-    async with DBSreEnv.from_docker_image(IMAGE_NAME) as env:
-        results = []
-        for task_id in ALL_TASKS:
-            episode_result = await run_episode(env, client, task_id)
-            results.append(episode_result)
-
-        # Print summary
-        print(f"\n{'=' * 60}", flush=True)
-        print("SUMMARY", flush=True)
-        print(f"{'=' * 60}", flush=True)
-
-        total_score = sum(r["score"] for r in results)
-        resolved = sum(1 for r in results if r["success"])
-        avg_score = total_score / len(results) if results else 0.0
-
-        for r in results:
-            status = "RESOLVED" if r["success"] else "FAILED"
-            print(
-                f"  {r['task_id']:>8}: score={r['score']:.3f}  steps={r['steps']}  {status}",
-                flush=True,
-            )
-
-        print(f"\n  Total:    {total_score:.3f} / {len(results)}", flush=True)
-        print(f"  Average:  {avg_score:.3f}", flush=True)
-        print(f"  Resolved: {resolved} / {len(results)}", flush=True)
-
-
-def main() -> None:
-    asyncio.run(async_main())
+        try:
+            await env.close()
+        except Exception as e:
+            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
