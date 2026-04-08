@@ -8,8 +8,8 @@ and reports the result in the mandatory OpenEnv stdout format.
 Environment variables:
     API_BASE_URL  API endpoint for the LLM        (default: HF router)
     MODEL_NAME    Model identifier for inference   (default: Qwen2.5-72B)
-    HF_TOKEN      Hugging Face / API key           (required, no default)
-    IMAGE_NAME    Docker image for SQLab env       (required, no default)
+    API_KEY       API key for the LLM              (required, no default)
+    IMAGE_NAME    Docker image for SQLab env       (optional, for from_docker_image)
     TASK_NAME     Which task to run                (default: task_12)
 
 Available tasks:
@@ -32,8 +32,8 @@ Available tasks:
             task_17 (Compound: Connection Exhaustion + Deadlock)
 
 Usage:
-    TASK_NAME=task_1 IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
-    TASK_NAME=task_12 IMAGE_NAME=sqlab HF_TOKEN=xxx python -m sqlab.inference
+    TASK_NAME=task_1 IMAGE_NAME=sqlab API_KEY=xxx python -m sqlab.inference
+    TASK_NAME=task_12 IMAGE_NAME=sqlab API_KEY=xxx python -m sqlab.inference
 """
 
 from __future__ import annotations
@@ -43,28 +43,28 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
+import requests
 from openai import OpenAI
-
-from sqlab.client import DBSreEnv
-from sqlab.models import DBSreAction
 
 # ---------------------------------------------------------------------------
 # Configuration — reads from environment variables per hackathon spec
 # ---------------------------------------------------------------------------
 
-IMAGE_NAME = os.environ.get("IMAGE_NAME")  # No default — must be set explicitly
+IMAGE_NAME = os.environ.get("IMAGE_NAME")
 API_KEY = os.environ.get("API_KEY")
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 TASK_NAME = os.getenv("TASK_NAME", "task_12")
 
+HF_SPACE_URL = "https://stvident-sqlab.hf.space"
+
 BENCHMARK = "sqlab"
 MAX_STEPS = 15
-TEMPERATURE = 0.0  # Deterministic for reproducibility
-MAX_TOKENS = 500   # Sufficient for any single SQL command
+TEMPERATURE = 0.0
+MAX_TOKENS = 500
 
 # ---------------------------------------------------------------------------
-# System prompt — deliberately minimal to test diagnostic ability
+# System prompt
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are an expert PostgreSQL DBA and Site Reliability Engineer.
@@ -81,7 +81,7 @@ IMPORTANT RULES:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Stdout logging helpers
 # ---------------------------------------------------------------------------
 
 
@@ -105,6 +105,11 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
         f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# Prompt / SQL helpers
+# ---------------------------------------------------------------------------
 
 
 def build_prompt(obs_data: Dict[str, Any]) -> str:
@@ -142,18 +147,120 @@ def extract_sql(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Main
+# HTTP fallback client (connects to HF Space directly, no Docker needed)
 # ---------------------------------------------------------------------------
 
 
-async def main() -> None:
-    if not API_KEY:
-        raise SystemExit(
-            "API_KEY must be set to query the model.\n"
-            "  export API_KEY=your_token_here"
-        )
+class HttpEnvClient:
+    """Thin HTTP client that talks to the SQLab server's /reset and /step."""
 
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    def __init__(self, base_url: str, timeout: int = 60):
+        self.base = base_url.rstrip("/")
+        self.timeout = timeout
+        self.session = requests.Session()
+
+    def reset(self, task_id: str) -> Dict[str, Any]:
+        r = self.session.post(
+            f"{self.base}/reset",
+            json={"task_id": task_id},
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        return r.json()
+
+    def step(self, command: str) -> Dict[str, Any]:
+        r = self.session.post(
+            f"{self.base}/step",
+            json={"action": {"command": command}},
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        return r.json()
+
+    def close(self):
+        self.session.close()
+
+
+# ---------------------------------------------------------------------------
+# Episode runner (works with both OpenEnv client and HTTP fallback)
+# ---------------------------------------------------------------------------
+
+
+def run_episode_http(
+    env: HttpEnvClient,
+    llm: OpenAI,
+    task_id: str,
+) -> Dict[str, Any]:
+    """Run a single episode using the HTTP fallback client."""
+    rewards: List[float] = []
+    steps_taken = 0
+    score = 0.0
+    success = False
+
+    try:
+        resp = env.reset(task_id)
+        obs_data = resp.get("observation", {})
+        done = resp.get("done", False)
+
+        for step in range(1, MAX_STEPS + 1):
+            if done:
+                break
+
+            prompt = build_prompt(obs_data)
+            completion = llm.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=MAX_TOKENS,
+                temperature=TEMPERATURE,
+            )
+
+            raw_response = (completion.choices[0].message.content or "").strip()
+            sql = extract_sql(raw_response)
+
+            resp = env.step(sql)
+            obs_data = resp.get("observation", {})
+            reward = resp.get("reward", 0.0) or 0.0
+            done = resp.get("done", False)
+            error = obs_data.get("error")
+
+            rewards.append(reward)
+            steps_taken = step
+
+            log_step(step=step, action=sql, reward=reward, done=done, error=error)
+
+            if done:
+                break
+
+        metadata = obs_data.get("metadata", {})
+        score = metadata.get("grader_score", 0.0) or 0.0
+        success = metadata.get("resolved", False)
+
+    except Exception as exc:
+        print(f"[DEBUG] Episode error: {exc}", flush=True)
+
+    return {
+        "score": score,
+        "steps": steps_taken,
+        "success": success,
+        "rewards": rewards,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Episode runner (OpenEnv client via from_docker_image)
+# ---------------------------------------------------------------------------
+
+
+async def run_episode_docker(
+    llm: OpenAI,
+    task_id: str,
+) -> Dict[str, Any]:
+    """Run a single episode using the OpenEnv Docker client."""
+    from sqlab.client import DBSreEnv
+    from sqlab.models import DBSreAction
 
     rewards: List[float] = []
     steps_taken = 0
@@ -161,12 +268,10 @@ async def main() -> None:
     success = False
     env = None
 
-    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
-
     try:
         env = await DBSreEnv.from_docker_image(IMAGE_NAME)
 
-        result = await env.reset(seed=None, task_id=TASK_NAME)
+        result = await env.reset(seed=None, task_id=task_id)
         obs = result.observation
         obs_data = obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
 
@@ -175,7 +280,7 @@ async def main() -> None:
                 break
 
             prompt = build_prompt(obs_data)
-            completion = client.chat.completions.create(
+            completion = llm.chat.completions.create(
                 model=MODEL_NAME,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
@@ -209,7 +314,7 @@ async def main() -> None:
         success = metadata.get("resolved", False)
 
     except Exception as exc:
-        print(f"[DEBUG] Episode error: {exc}", flush=True)
+        print(f"[DEBUG] Docker episode error: {exc}", flush=True)
 
     finally:
         if env is not None:
@@ -217,7 +322,57 @@ async def main() -> None:
                 await env.close()
             except Exception as e:
                 print(f"[DEBUG] env.close() error: {e}", flush=True)
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+
+    return {
+        "score": score,
+        "steps": steps_taken,
+        "success": success,
+        "rewards": rewards,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+async def main() -> None:
+    if not API_KEY:
+        raise SystemExit(
+            "API_KEY must be set to query the model.\n"
+            "  export API_KEY=your_token_here"
+        )
+
+    llm = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+
+    result = None
+
+    # Strategy 1: Try from_docker_image if IMAGE_NAME is set
+    if IMAGE_NAME:
+        print(f"[DEBUG] Trying from_docker_image({IMAGE_NAME})...", flush=True)
+        result = await run_episode_docker(llm, TASK_NAME)
+
+    # Strategy 2: Fall back to HTTP client if Docker failed or wasn't available
+    if result is None or (result["steps"] == 0 and not result["success"]):
+        if result is not None:
+            print(f"[DEBUG] Docker approach failed, falling back to HTTP client", flush=True)
+        else:
+            print(f"[DEBUG] No IMAGE_NAME set, using HTTP client", flush=True)
+
+        env = HttpEnvClient(HF_SPACE_URL)
+        try:
+            result = run_episode_http(env, llm, TASK_NAME)
+        finally:
+            env.close()
+
+    log_end(
+        success=result["success"],
+        steps=result["steps"],
+        score=result["score"],
+        rewards=result["rewards"],
+    )
 
 
 if __name__ == "__main__":
