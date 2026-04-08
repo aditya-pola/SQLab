@@ -96,10 +96,10 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def log_end(task: str, success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
+        f"[END] task={task} success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -244,6 +244,8 @@ def main() -> None:
 
         metadata = obs_data.get("metadata", {})
         score = metadata.get("grader_score", 0.0) or 0.0
+        # Validator requires strictly 0 < score < 1
+        score = max(0.001, min(0.999, score))
         success = metadata.get("resolved", False)
 
     except Exception as exc:
@@ -251,7 +253,7 @@ def main() -> None:
 
     finally:
         env.close()
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        log_end(task=TASK_NAME, success=success, steps=steps_taken, score=score, rewards=rewards)
 
 
 if __name__ == "__main__":
