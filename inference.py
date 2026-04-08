@@ -52,10 +52,10 @@ from sqlab.models import DBSreAction
 # Configuration — reads from environment variables per hackathon spec
 # ---------------------------------------------------------------------------
 
-IMAGE_NAME = os.getenv("IMAGE_NAME")  # No default — must be set explicitly
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+IMAGE_NAME = os.environ.get("IMAGE_NAME")  # No default — must be set explicitly
+API_KEY = os.environ.get("API_KEY")
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.environ.get("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 TASK_NAME = os.getenv("TASK_NAME", "task_12")
 
 BENCHMARK = "sqlab"
@@ -149,8 +149,8 @@ def extract_sql(text: str) -> str:
 async def main() -> None:
     if not API_KEY:
         raise SystemExit(
-            "HF_TOKEN (or API_KEY) must be set to query the model.\n"
-            "  export HF_TOKEN=your_token_here"
+            "API_KEY must be set to query the model.\n"
+            "  export API_KEY=your_token_here"
         )
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
