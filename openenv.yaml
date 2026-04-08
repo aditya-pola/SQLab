@@ -1,8 +1,61 @@
 name: sqlab
 version: "0.1.0"
-description: "PostgreSQL incident response training environment — SQLab. An LLM agent receives an alert about a database problem and must diagnose and fix it using SQL commands."
+description: >
+  PostgreSQL incident response training environment — SQLab.
+  An LLM agent receives an alert about a database problem and must
+  diagnose and fix it using SQL commands against a live PostgreSQL
+  database with 20 million rows of airline booking data.
+
+  17 tasks across 3 difficulty levels with deterministic per-task graders.
+  9 baseline models tested (0.39–0.77 avg score).
+
 action: DBSreAction
 observation: DBSreObservation
+
+openenv:
+  env_type: custom
+  server:
+    port: 8000
+    host: 0.0.0.0
+  required_endpoints:
+    tasks:    GET  /tasks
+    grader:   POST /grader
+    baseline: POST /baseline
+  entry_points:
+    server: sqlab.server.app:app
+    client: sqlab.client:DBSreEnv
+
+tasks:
+  - id: task_1
+    name: Missing Index
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A critical query on ticket_flights is doing a sequential scan.
+      Agent must diagnose via EXPLAIN and create the right index.
+
+  - id: task_5
+    name: Bad Configuration
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      PostgreSQL memory settings are misconfigured, causing excessive disk I/O.
+      Agent must identify and fix the configuration parameters.
+
+  - id: task_12
+    name: "Compound: Stale Stats + Missing Index"
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A compound incident with both stale table statistics and a missing index.
+      Agent must run ANALYZE and create the correct index to resolve both issues.
+
 tags:
   - openenv
   - rl-environment
@@ -10,3 +63,11 @@ tags:
   - sre
   - database
   - incident-response
+
+dependencies:
+  - openenv-core>=0.2.0
+  - fastapi>=0.100.0
+  - uvicorn>=0.23.0
+  - psycopg2-binary
+  - pydantic>=2.0
+  - openai>=1.0.0
