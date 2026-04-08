@@ -26,6 +26,7 @@ openenv:
     client: sqlab.client:DBSreEnv
 
 tasks:
+  # ── Easy (5 tasks) ──
   - id: task_1
     name: Missing Index
     difficulty: easy
@@ -35,6 +36,36 @@ tasks:
     description: >
       A critical query on ticket_flights is doing a sequential scan.
       Agent must diagnose via EXPLAIN and create the right index.
+
+  - id: task_2
+    name: Stale Statistics
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Table statistics are outdated, causing the query planner to choose
+      suboptimal plans. Agent must run ANALYZE to refresh statistics.
+
+  - id: task_3
+    name: Long-Running Transaction / Lock
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A long-running transaction is holding locks and blocking other queries.
+      Agent must identify and terminate the blocking session.
+
+  - id: task_4
+    name: Connection Exhaustion
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      The database connection pool is exhausted by idle sessions.
+      Agent must terminate idle connections and set a timeout.
 
   - id: task_5
     name: Bad Configuration
@@ -46,6 +77,68 @@ tasks:
       PostgreSQL memory settings are misconfigured, causing excessive disk I/O.
       Agent must identify and fix the configuration parameters.
 
+  # ── Medium (6 tasks) ──
+  - id: task_6
+    name: Redundant Indexes
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      The table has redundant indexes that waste space and slow writes.
+      Agent must identify and remove the unnecessary indexes.
+
+  - id: task_7
+    name: Lock Contention
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      UPDATE and SELECT queries are contending for locks on the same table.
+      Agent must resolve the contention.
+
+  - id: task_8
+    name: Table Bloat / Vacuum Stuck
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A table has excessive bloat and autovacuum is stuck.
+      Agent must unblock vacuum and reclaim space.
+
+  - id: task_9
+    name: Over-Indexing
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Too many indexes on a table are degrading write performance.
+      Agent must identify and drop the unnecessary indexes.
+
+  - id: task_10
+    name: Index Bloat / Fragmented Index
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      An index has become bloated and fragmented, degrading query performance.
+      Agent must rebuild or reindex to fix it.
+
+  - id: task_11
+    name: Wrong Index Column Order
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A composite index has columns in the wrong order for the query pattern.
+      Agent must create a correctly ordered index.
+
+  # ── Hard (6 tasks) ──
   - id: task_12
     name: "Compound: Stale Stats + Missing Index"
     difficulty: hard
@@ -53,8 +146,58 @@ tasks:
       type: deterministic
       endpoint: /grader
     description: >
-      A compound incident with both stale table statistics and a missing index.
-      Agent must run ANALYZE and create the correct index to resolve both issues.
+      A compound incident with both stale statistics and a missing index.
+      Agent must fix both issues to fully resolve the incident.
+
+  - id: task_13
+    name: "Compound: Lock + Bloat"
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A compound incident with lock contention and table bloat.
+      Agent must resolve both the locking and the bloat.
+
+  - id: task_14
+    name: Deadlock Chain
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Multiple transactions are deadlocked. Agent must identify
+      the deadlock chain and terminate the right backends.
+
+  - id: task_15
+    name: Query Plan Flip
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      The query planner has flipped to a bad plan due to configuration drift.
+      Agent must diagnose and fix the underlying cause.
+
+  - id: task_16
+    name: Cascading Bloat (Multi-Table)
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Multiple related tables have cascading bloat from a long-running
+      transaction. Agent must clean up all affected tables.
+
+  - id: task_17
+    name: "Compound: Connection Exhaustion + Deadlock"
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      A compound incident with connection pool exhaustion and deadlocked
+      transactions. Agent must resolve both issues.
 
 tags:
   - openenv
