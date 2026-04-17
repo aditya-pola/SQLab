@@ -2173,7 +2173,11 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
                 outputs=_reset_outputs,
             )
 
-            # Hint buttons — just fill the SQL input box
+            # Execute inputs/outputs (defined early so hint buttons can chain into do_execute)
+            _exec_inputs = [sql_input, playground_state, hint_state]
+            _exec_outputs = [obs_log_display, metrics_display, step_display, reward_display, status_display, grader_display, playground_state, path_prompt, hint_btn_1, hint_btn_2, hint_btn_3, reveal_check, hint_state]
+
+            # Hint buttons — fill the SQL input box AND auto-execute
             def load_hint(idx, hs):
                 options = hs.get("options", [])
                 disabled = hs.get("disabled", [False, False, False])
@@ -2181,9 +2185,15 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
                     return options[idx][0]  # cmd text
                 return gr.update()
 
-            hint_btn_1.click(lambda hs: load_hint(0, hs), inputs=[hint_state], outputs=[sql_input])
-            hint_btn_2.click(lambda hs: load_hint(1, hs), inputs=[hint_state], outputs=[sql_input])
-            hint_btn_3.click(lambda hs: load_hint(2, hs), inputs=[hint_state], outputs=[sql_input])
+            hint_btn_1.click(
+                lambda hs: load_hint(0, hs), inputs=[hint_state], outputs=[sql_input]
+            ).then(do_execute, inputs=_exec_inputs, outputs=_exec_outputs)
+            hint_btn_2.click(
+                lambda hs: load_hint(1, hs), inputs=[hint_state], outputs=[sql_input]
+            ).then(do_execute, inputs=_exec_inputs, outputs=_exec_outputs)
+            hint_btn_3.click(
+                lambda hs: load_hint(2, hs), inputs=[hint_state], outputs=[sql_input]
+            ).then(do_execute, inputs=_exec_inputs, outputs=_exec_outputs)
 
             # Reveal checkbox — change button variants to show correct (green) / wrong (red)
             def toggle_reveal(checked, hs):
@@ -2207,9 +2217,7 @@ def create_gradio_app(env, env_lock: threading.Lock) -> gr.Blocks:
                 outputs=[hint_btn_1, hint_btn_2, hint_btn_3],
             )
 
-            # Execute button — executes SQL + path feedback if command matches a hint
-            _exec_inputs = [sql_input, playground_state, hint_state]
-            _exec_outputs = [obs_log_display, metrics_display, step_display, reward_display, status_display, grader_display, playground_state, path_prompt, hint_btn_1, hint_btn_2, hint_btn_3, reveal_check, hint_state]
+            # Execute button and Enter key
             execute_btn.click(do_execute, inputs=_exec_inputs, outputs=_exec_outputs)
             sql_input.submit(do_execute, inputs=_exec_inputs, outputs=_exec_outputs)
 
